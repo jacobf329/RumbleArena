@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Kurogane"
+epithet = "Ironjaw"
+concept = "A defector from a clan of forge-smiths, more iron than man."
+stat_strength = 5
+stat_speed = 2
+stat_agility = 2
+stat_tech = 1
+stat_focus = 3
+stat_toughness = 5
+body_color = Color(0.54, 0.57, 0.61, 1)

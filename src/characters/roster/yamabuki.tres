@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Yamabuki"
+epithet = "Highline"
+concept = "Treats a skyline the way other ninjas treat a corridor."
+stat_strength = 2
+stat_speed = 3
+stat_agility = 5
+stat_tech = 2
+stat_focus = 3
+stat_toughness = 2
+body_color = Color(0.94, 0.63, 0.13, 1)

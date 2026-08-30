@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Null"
+epithet = ""
+concept = "No face, no name in any registry. Deletes herself from rooms."
+stat_strength = 1
+stat_speed = 4
+stat_agility = 3
+stat_tech = 5
+stat_focus = 4
+stat_toughness = 2
+body_color = Color(0.49, 0.31, 0.88, 1)

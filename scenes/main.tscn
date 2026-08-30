@@ -1,0 +1,88 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://src/core/proving_ground.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/arenas/proving_ground.tscn" id="2_arena"]
+[ext_resource type="Script" path="res://src/camera/arena_camera.gd" id="3_camera"]
+[ext_resource type="Script" path="res://src/ui/debug_hud.gd" id="4_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
+sky_top_color = Color(0.1, 0.12, 0.2, 1)
+sky_horizon_color = Color(0.22, 0.23, 0.29, 1)
+ground_bottom_color = Color(0.06, 0.06, 0.08, 1)
+ground_horizon_color = Color(0.15, 0.16, 0.2, 1)
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("SkyMaterial_main")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_main")
+ambient_light_source = 3
+ambient_light_energy = 0.55
+tonemap_mode = 2
+
+[sub_resource type="LabelSettings" id="LabelSettings_hint"]
+font_size = 22
+font_color = Color(1, 1, 1, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 0.75)
+
+[sub_resource type="LabelSettings" id="LabelSettings_body"]
+font_size = 19
+font_color = Color(0.85, 0.88, 0.95, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 0.75)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.7262, -0.5907, 0.35, 0, 0.5091, 0.86, -0.6869, -0.6245, 0.37, 0, 14, 0)
+light_energy = 1.05
+shadow_enabled = true
+
+[node name="Arena" parent="." instance=ExtResource("2_arena")]
+
+[node name="Fighters" type="Node3D" parent="."]
+
+[node name="ArenaCamera" type="Camera3D" parent="."]
+current = true
+fov = 60.0
+script = ExtResource("3_camera")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="DebugHUD" type="Control" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("4_hud")
+
+[node name="Margin" type="MarginContainer" parent="HUD/DebugHUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="Rows" type="VBoxContainer" parent="HUD/DebugHUD/Margin"]
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="JoinHint" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
+text = "Press [A] on a gamepad, or [SPACE] on the keyboard, to join."
+label_settings = SubResource("LabelSettings_hint")
+
+[node name="Players" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
+label_settings = SubResource("LabelSettings_body")
+
+[node name="Controls" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
+label_settings = SubResource("LabelSettings_body")

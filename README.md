@@ -9,8 +9,15 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-Planning complete; implementation starts at **M1**. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+**M1 complete** — four players can join with gamepads or keyboard and run, jump,
+double-jump and dash around a grey-box arena under a single shared camera.
+Combat starts at M2. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+![Four players in the Proving Ground](docs/images/m1-four-players.png)
+
+The camera frames everyone and pushes in when the fight closes up:
+
+![The camera pushing in](docs/images/m1-camera-close.png)
 
 ## Design
 
@@ -28,8 +35,36 @@ least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
 
 ## Running it
 
-Open the project folder in Godot 4.3. Four gamepads for the full experience;
-one player can use keyboard.
+Open the project folder in Godot 4.3 and press play. Press **A** on a gamepad or
+**Space** on the keyboard to take a seat; up to four can join at any time, and a
+pad can be unplugged and plugged back in without losing its fighter.
+
+Each seat gets a different stat block, so the movement asymmetry is apparent
+immediately: Kurogane is heavy and cannot double jump at all, Jinsoku is quick,
+Yamabuki jumps highest.
+
+| | Gamepad | Keyboard |
+|---|---|---|
+| Move | Left stick | WASD |
+| Jump | A (hold for height) | Space |
+| Dash | Left trigger | Shift |
+| Light / Heavy / Launcher | X / Y / RB | J / K / L |
+| Grab / Block | B / LB | U / Ctrl |
+| Interact / Signature / Ultimate | D-pad up / RT / D-pad down | E / Q / R |
+
+F5 returns everyone to their spawn. Combat buttons are wired through to the
+input layer but do nothing yet — that is M2.
+
+## Testing
+
+```sh
+GODOT=/path/to/godot ./run_tests.sh
+```
+
+Imports the project to surface script and scene parse errors, then runs a
+36-check smoke test that drives real fighters through the real main scene using
+scripted input sources. Because fighters only ever read an `InputFrame`, the
+whole movement system is testable headlessly with no hardware.
 
 ## Repo layout
 

@@ -8,7 +8,12 @@ config_version=5
 config/name="RumbleArena"
 config/description="A 4-player local versus arena brawler. Named ninjas with super powers tear each other, and the arena itself, apart."
 config/features=PackedStringArray("4.3", "Forward Plus")
+run/main_scene="res://scenes/main.tscn"
 config/icon="res://icon.svg"
+
+[autoload]
+
+PlayerManager="*res://src/core/player_manager.gd"
 
 [display]
 
