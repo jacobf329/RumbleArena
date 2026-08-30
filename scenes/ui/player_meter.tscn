@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://src/ui/player_meter.gd" id="1_meter"]
 
@@ -41,6 +41,11 @@ corner_radius_top_right = 2
 corner_radius_bottom_right = 2
 corner_radius_bottom_left = 2
 
+[sub_resource type="LabelSettings" id="Label_stocks"]
+font_size = 20
+outline_size = 5
+outline_color = Color(0, 0, 0, 0.8)
+
 [sub_resource type="LabelSettings" id="Label_name"]
 font_size = 18
 outline_size = 5
@@ -57,6 +62,10 @@ theme_override_constants/separation = 6
 [node name="Name" type="Label" parent="Rows"]
 text = "P?"
 label_settings = SubResource("Label_name")
+
+[node name="Stocks" type="Label" parent="Rows"]
+text = "●●●"
+label_settings = SubResource("Label_stocks")
 
 [node name="Health" type="ProgressBar" parent="Rows"]
 custom_minimum_size = Vector2(0, 18)

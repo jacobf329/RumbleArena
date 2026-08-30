@@ -50,17 +50,20 @@ func meets(type: Stats.Type, tier: int) -> bool:
 
 # --- Derived movement, all driven by the stat block ---
 
+## Tuned down about a quarter after playtesting: the original top speed put a
+## SPEED 5 fighter above a real sprinter, which read as skating rather than
+## running and left no time to react to anyone.
 func get_max_speed() -> float:
-	return 6.0 + stat_speed * 1.1
+	return 4.4 + stat_speed * 0.85
 
 
 func get_acceleration() -> float:
-	return 45.0 + stat_speed * 12.0
+	return 34.0 + stat_speed * 9.0
 
 
 ## Heavier fighters slide; light quick ones stop on a dime.
 func get_ground_friction() -> float:
-	return 60.0 - stat_strength * 4.0 + stat_speed * 4.0
+	return 46.0 - stat_strength * 3.0 + stat_speed * 3.0
 
 
 func get_jump_height() -> float:
@@ -78,7 +81,7 @@ func get_extra_jumps() -> int:
 
 
 func get_dash_speed() -> float:
-	return 13.0 + stat_speed * 2.0
+	return 10.0 + stat_speed * 1.5
 
 
 func get_dash_duration() -> float:

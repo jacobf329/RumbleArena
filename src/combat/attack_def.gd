@@ -39,6 +39,26 @@ extends Resource
 ## Offset from the fighter's feet, in the fighter's own frame (-Z is forward).
 @export var hitbox_offset: Vector3 = Vector3(0, 1.0, -1.0)
 
+@export_group("Projectile")
+## Launches a fireball as the hitbox opens. The light chain's finisher uses
+## this, so punch-punch-kick ends in a projectile.
+@export var launches_fireball: bool = false
+@export var fireball_power_cost: float = 30.0
+@export var fireball_damage: float = 11.0
+@export var fireball_speed: float = 13.0
+@export var fireball_knockback: float = 8.0
+
+@export_group("Grab")
+## Seizes the victim rather than striking them: ignores blocking, holds them
+## through the animation, then throws them. Grab beats block, block beats
+## strike, strike beats grab.
+@export var is_grab: bool = false
+## Tick, measured from the start of the move, at which the victim is released.
+@export var grab_release_tick: int = 26
+@export var grab_throw_speed: float = 16.0
+@export var grab_damage: float = 13.0
+@export var grab_launch_angle: float = 34.0
+
 @export_group("Animation")
 ## Clip in the shared ninja library. Frame data owns gameplay timing; the clip
 ## is scaled to fit it, never the other way round.

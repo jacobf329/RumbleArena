@@ -9,13 +9,14 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-**M3 complete** — four players join with gamepads or keyboard and fight in a
-grey-box arena under a single shared camera: punch-punch-kick chains, heavy and
-launcher confirms, blocking, dodging, juggles, knockdowns and wall splats, with
-timing-based rhythm bonuses. The arena is stat-gated: Kurogane rips out concrete
-pillars and throws them, Null hacks the ceiling turrets, Yamabuki climbs the
-comms tower, and each is refused what the others can do. Match flow and stocks
-come next in M4. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**M4 in progress** — a real match now: two or more players, a countdown, three
+stocks each, elimination and a winner. Combat is punch-punch-kick chains ending
+in a fireball, heavy and launcher confirms, grabs that beat a guard, blocking,
+dodging, juggles, knockdowns and wall splats, with timing-based rhythm bonuses.
+The arena is stat-gated: Kurogane rips out concrete pillars and throws them,
+Null hacks the ceiling turrets, Yamabuki climbs the comms tower, and each is
+refused what the others can do. Signature powers and character select are what
+remain. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 The same pillar, offered to the fighter who qualifies and refused — with the
 requirement named — to the one who does not:
@@ -135,10 +136,16 @@ harder and longer.
 
 F5 returns everyone to their spawn.
 
-Light chains **punch, punch, kick**; heavy and launcher are confirms that only
-cancel out of a move that actually connected, so whiffing a heavy costs you the
-full recovery. Block covers the front only. Dodge has invulnerability frames and
+Light chains **punch, punch, kick** — and the kick throws a **fireball** if the
+blue meter can pay for it. Heavy and launcher are confirms that only cancel out
+of a move that actually connected, so whiffing a heavy costs you the full
+recovery. **Grab beats block, block beats strike, strike beats grab**; a whiffed
+grab has the longest recovery of any move. Dodge has invulnerability frames and
 costs stamina. Knocking someone into a wall splats them and hands you a juggle.
+
+**A match** needs two players and starts on a countdown that restarts whenever
+someone else joins. Three stocks each, last ninja standing wins, and if the
+clock runs out the most stocks takes it.
 
 **The arena is a weapon.** Stand near something and a prompt appears above you.
 If your stats do not clear it, the prompt still appears — greyed out, naming what

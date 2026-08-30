@@ -238,19 +238,62 @@ stat spread worth playing rather than merely worth reading.
 
 ---
 
-## M4 — Vertical slice: Kurogane vs Null
+## M4 — Match flow and the first playtest pass — **IN PROGRESS**
 **Risk under test:** is asymmetry fun, or just unbalanced?
 
-- [ ] `Power` base class, meter cost, cast state
+- [x] Stock-based match flow: countdown, KO, elimination, victory, rematch
+- [x] 4-player HUD: stock pips, match clock, countdown and result banner
+- [x] Fireball cast by the punch-punch-kick chain, paid for out of the meter
+- [x] Grabs and throws, which beat a guard
+- [x] First playtest tuning pass (speed, hit recoil, hitstun)
+- [ ] `Power` base class for the signature and ultimate buttons
 - [ ] Kurogane: Seismic Palm, Ogre Rampage
 - [ ] Null: Blink Strike, System Seize
 - [ ] Arena "The Server Shrine" built to spec (§6 of the GDD)
 - [ ] Character select with join/ready flow
-- [ ] Stock-based match flow, KO, victory screen
-- [ ] 4-player HUD
 
-**Playable result:** the full slice from §11 of the GDD. This is the go/no-go
-gate for the whole project.
+### Match rules
+
+A match needs two players and starts on a countdown that **restarts whenever
+somebody else joins**, so nobody is locked out for being a moment late. Three
+stocks each; a knockout costs one and respawns you with a moment of
+invulnerability, because otherwise whoever is standing on the spawn point takes
+the next stock too. Spending your last stock takes you off the field. Last one
+standing wins; if the clock runs out, most stocks wins and an exact tie is a
+draw rather than an arbitrary winner. Knockouts before the bell cost nothing.
+
+**Fighters do not decide their own fate.** A fighter reports that it was
+defeated and stops there; the MatchManager decides whether that costs a stock, a
+respawn, or the match. Keeping that in one place is what makes "last ninja
+standing" a rule rather than something smeared across the fighter class.
+
+### First playtest pass
+
+Changes made off the back of actually playing it:
+
+- **Movement is about a quarter slower.** The original top speed put a SPEED 5
+  fighter above a real sprinter, which read as skating and left no time to react
+  to anyone.
+- **Hitstun is up roughly 40%**, so a combo genuinely holds the opponent still.
+  Before, a jab left the attacker free four ticks before the victim -- too slim a
+  margin to feel like control, which is where "they can still hit me back"
+  came from.
+- **Hit recoil.** With no hit-reaction clip yet, the model is knocked back and
+  tipped away from the blow, easing home over the next few ticks. That is what
+  makes a hit read as landing *on somebody* rather than just moving them.
+- **A fireball on the chain finisher.** Punch, punch, kick ends in a projectile
+  if the power meter can pay for it, which finally gives the meter a purpose.
+  Running dry is not a failure state; you just get the kick.
+- **Grabs.** Short range, and they ignore a guard entirely: grab beats block,
+  block beats strike, strike beats grab. A whiffed grab has the longest recovery
+  of any move, because a move that beats guarding has to be the worst thing to
+  throw out at random.
+
+### What this turned up
+
+- **The fireball was paying for itself.** The finisher's own connect credited
+  power on the same tick the cost was checked, so the move funded its own
+  projectile and the meter meant nothing. The cast now resolves before hits do.
 
 ---
 

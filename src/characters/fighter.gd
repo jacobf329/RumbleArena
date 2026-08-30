@@ -61,6 +61,10 @@ var pending_hitstun: int = 0
 ## What this fighter is holding, and what it would act on if INTERACT were
 ## pressed right now. The target is tracked even when the fighter does not
 ## qualify, because a refused prompt is how the stat system teaches itself.
+## Out of stocks and out of the match. The MatchManager decides this; a fighter
+## never removes itself.
+var is_eliminated := false
+
 var carried: Liftable = null
 var interaction_target: Interactable = null
 ## The wall this fighter is currently on, if any.
@@ -381,7 +385,8 @@ func _capture_buffered_presses() -> void:
 		_jump_buffer = JUMP_BUFFER
 
 	for action: InputFrame.Action in [
-		InputFrame.Action.LIGHT, InputFrame.Action.HEAVY, InputFrame.Action.LAUNCHER
+		InputFrame.Action.LIGHT, InputFrame.Action.HEAVY,
+		InputFrame.Action.LAUNCHER, InputFrame.Action.GRAB,
 	]:
 		if input.is_just_pressed(action):
 			_attack_buffer_action = action
@@ -541,6 +546,8 @@ func request_attack() -> bool:
 			attack = move_set.heavy if grounded else move_set.air_heavy
 		InputFrame.Action.LAUNCHER:
 			attack = move_set.launcher if grounded else move_set.air_heavy
+		InputFrame.Action.GRAB:
+			attack = move_set.grab if grounded else null
 
 	if attack == null:
 		return false
@@ -726,9 +733,10 @@ func take_hit(result: HitResult) -> void:
 		_knockdown_pending = result.knockback.length() >= CombatMath.KNOCKDOWN_SPEED
 		_transition_to(FighterState.HITSTUN)
 
+	# Reporting the knockout is as far as a fighter goes. Whether that costs a
+	# stock, a respawn, or the match is the MatchManager's call.
 	if health <= 0.0:
 		defeated.emit()
-		respawn()
 
 
 ## Scenery too tough for this fighter throws a dull spark and takes nothing, so
@@ -745,6 +753,80 @@ func _hit_breakable(attack: AttackDef, breakable: Breakable) -> bool:
 		breakable.global_position + Vector3.UP * 0.8, Color(0.55, 0.58, 0.62), 4.0)
 	apply_hitstop(3)
 	return false
+
+
+## Casts the chain finisher's fireball, if this move has one and the meter can
+## pay for it. Running dry is not a failure state -- you simply get the kick.
+func try_launch_fireball(attack: AttackDef) -> bool:
+	if not attack.launches_fireball:
+		return false
+	if power < attack.fireball_power_cost:
+		return false
+
+	power -= attack.fireball_power_cost
+	var facing := get_facing_direction()
+	Fireball.cast(
+		get_tree().current_scene,
+		global_position + Vector3.UP * 1.15 + facing * 0.9,
+		facing,
+		attack.fireball_speed,
+		attack.fireball_damage * CombatMath.offense(character_def.stat_strength),
+		attack.fireball_knockback,
+		self)
+	return true
+
+
+# --- Grabs ---
+#
+# A grab does not check whether the victim is blocking. That is the point of it:
+# grab beats block, block beats strike, strike beats grab, and a guard that
+# covered everything would make turtling strictly correct.
+
+## Takes hold of a victim. Returns whether the grab caught them.
+func seize(victim: Fighter) -> bool:
+	if victim.is_invulnerable() or victim.is_eliminated:
+		return false
+	victim.velocity = Vector3.ZERO
+	# Longer than any grab animation; the throw or an interrupt ends it.
+	victim.pending_hitstun = 240
+	victim._transition_to(FighterState.HITSTUN)
+	apply_hitstop(4)
+	return true
+
+
+func hold_grabbed(victim: Fighter) -> void:
+	if not is_instance_valid(victim):
+		return
+	victim.global_position = global_position + get_facing_direction() * 0.95
+	victim.velocity = Vector3.ZERO
+
+
+func throw_grabbed(victim: Fighter, attack: AttackDef) -> void:
+	if not is_instance_valid(victim):
+		return
+
+	var radians := deg_to_rad(attack.grab_launch_angle)
+	var direction := (get_facing_direction() * cos(radians) + Vector3.UP * sin(radians)).normalized()
+	var scale := CombatMath.offense(character_def.stat_strength) \
+		/ CombatMath.defense(victim.character_def.stat_toughness)
+
+	var result := HitResult.new()
+	result.attacker = self
+	result.attack = attack
+	result.damage = attack.grab_damage * CombatMath.offense(character_def.stat_strength)
+	result.knockback = direction * attack.grab_throw_speed * scale
+	result.hitstun_ticks = 34
+	result.hitstop_ticks = 9
+	result.position = victim.global_position + Vector3.UP
+
+	victim.take_hit(result)
+	power = minf(power + attack.power_gain, max_power)
+
+
+## The grab was interrupted before the throw, so the victim simply gets up.
+func release_grabbed(victim: Fighter) -> void:
+	if is_instance_valid(victim) and victim.get_state_id() == FighterState.HITSTUN:
+		victim._transition_to(FighterState.IDLE)
 
 
 func _spawn_feedback(result: HitResult) -> void:
@@ -768,6 +850,8 @@ func _spawn_feedback(result: HitResult) -> void:
 	# Taking a hit buzzes hard and long; landing one is a short confirming tap.
 	# On a controller-first game this carries as much of the impact as the shake.
 	var felt := clampf(result.damage / 24.0, 0.18, 1.0)
+	if not result.blocked and _visual != null:
+		_visual.recoil(result.knockback, felt)
 	_rumble(felt * 0.65, felt, 0.30 if result.on_beat else 0.22)
 	var attacker_fighter := result.attacker as Fighter
 	if attacker_fighter != null and attacker_fighter != self:
@@ -906,6 +990,32 @@ func respawn() -> void:
 	_invulnerable = 0
 	set_downed(false)
 	_transition_to(FighterState.IDLE)
+
+
+## Taken out of the match: hidden and frozen, but kept in the tree so the HUD
+## and the match rules can still read its slot.
+func eliminate() -> void:
+	if is_eliminated:
+		return
+	is_eliminated = true
+	if carried != null:
+		carried.release()
+		carried = null
+	climbing = null
+	velocity = Vector3.ZERO
+	health = 0.0
+	hide()
+	set_physics_process(false)
+	if slot != null and slot.source != null:
+		slot.source.stop_rumble()
+
+
+## Brought back for a rematch.
+func restore() -> void:
+	is_eliminated = false
+	show()
+	set_physics_process(true)
+	respawn()
 
 
 func get_state_id() -> StringName:

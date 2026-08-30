@@ -68,10 +68,11 @@ func remove_target(target: Node3D) -> void:
 
 func _physics_process(delta: float) -> void:
 	_targets = _targets.filter(func(t: Node3D) -> bool: return is_instance_valid(t))
-	if _targets.is_empty():
+	var framed: Array[Node3D] = _targets.filter(func(t: Node3D) -> bool: return t.visible)
+	if framed.is_empty():
 		return
 
-	var enclosing := _enclosing_box()
+	var enclosing := _enclosing_box(framed)
 	var desired_focus := _clamp_to_bounds(enclosing.get_center())
 	var desired_distance := clampf(
 		_required_distance(enclosing.get_center()), min_distance, max_distance)
@@ -85,9 +86,9 @@ func _physics_process(delta: float) -> void:
 	_apply_transform()
 
 
-func _enclosing_box() -> AABB:
-	var box := AABB(_targets[0].global_position, Vector3.ZERO)
-	for target in _targets:
+func _enclosing_box(framed: Array[Node3D]) -> AABB:
+	var box := AABB(framed[0].global_position, Vector3.ZERO)
+	for target: Node3D in framed:
 		box = box.expand(target.global_position)
 	return box
 
@@ -105,7 +106,7 @@ func _required_distance(center: Vector3) -> float:
 
 	var half_width := 0.0
 	var half_height := 0.0
-	for target in _targets:
+	for target: Node3D in _targets.filter(func(t: Node3D) -> bool: return t.visible):
 		var offset := target.global_position - center
 		half_width = maxf(half_width, absf(offset.dot(right)))
 		half_height = maxf(half_height, absf(offset.dot(up)))

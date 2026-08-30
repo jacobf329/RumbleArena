@@ -12,6 +12,7 @@ extends Resource
 @export var launcher: AttackDef
 @export var air_light: AttackDef
 @export var air_heavy: AttackDef
+@export var grab: AttackDef
 
 
 func light(index: int) -> AttackDef:

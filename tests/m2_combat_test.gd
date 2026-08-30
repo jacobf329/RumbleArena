@@ -68,6 +68,12 @@ func _run() -> void:
 	await _test_dodge_grants_invulnerability(yamabuki)
 	await _test_stamina_gates_dodging(yamabuki)
 
+	_section("Fireball and grab")
+	await _test_finisher_launches_a_fireball(kurogane, yamabuki)
+	await _test_fireball_needs_power(kurogane, yamabuki)
+	await _test_grab_beats_block(kurogane, yamabuki)
+	await _test_whiffed_grab_is_punishable(kurogane)
+
 	_section("Rhythm")
 	_test_animation_data_is_sane(kurogane)
 	await _test_mashing_earns_nothing(kurogane, yamabuki)
@@ -156,6 +162,7 @@ func _test_strength_and_toughness_are_asymmetric(bruiser: Fighter, hacker: Fight
 ## without pinning, knockback would decide whether link two lands.
 func _test_light_chain(attacker: Fighter, victim: Fighter) -> void:
 	await _stage(attacker, victim)
+	attacker.power = 0.0  # no meter, so the finisher's fireball stays out of it
 	var source := _source(attacker)
 
 	for link in 3:
@@ -164,10 +171,12 @@ func _test_light_chain(attacker: Fighter, victim: Fighter) -> void:
 		await _pinned_ticks(2, attacker, victim)
 	await _pinned_ticks(40, attacker, victim)
 
-	_check(_hits.size() == 3, "the light chain lands three distinct hits (got %d)" % _hits.size())
+	var names: Array = _hits.map(func(r: HitResult) -> String:
+		return r.attack.display_name if r.attack != null else "<projectile>")
+	_check(_hits.size() == 3, "the light chain lands three distinct hits (got %d: %s)"
+		% [_hits.size(), ", ".join(names)])
 	if _hits.size() != 3:
 		return
-	var names: Array = _hits.map(func(r: HitResult) -> String: return r.attack.display_name)
 	_check(names == ["Jab", "Cross", "Roundhouse"],
 		"the chain runs jab into cross into roundhouse (%s)" % ", ".join(names))
 	_check(_hits[2].damage > _hits[0].damage,
@@ -437,6 +446,100 @@ func _test_stamina_gates_dodging(fighter: Fighter) -> void:
 	fighter.stamina = 1.0
 	await _ticks(60)
 	_check(fighter.stamina > 1.0, "stamina regenerates (%.1f)" % fighter.stamina)
+
+
+# --- Fireball and grab ---
+
+## Landing punch, punch, kick ends in a projectile, so the chain finisher is
+## worth reaching rather than just the biggest of the three hits.
+func _test_finisher_launches_a_fireball(attacker: Fighter, victim: Fighter) -> void:
+	# Out of melee range on purpose: the chain still runs on whiff, so what is
+	# measured is the finisher casting rather than any punch connecting.
+	await _stage(attacker, victim, 5.0)
+	attacker.power = attacker.max_power
+	var before := attacker.power
+
+	var seen := await _run_chain_and_count_fireballs(attacker, victim)
+
+	_check(attacker.power < before, "casting the fireball spends power (%.0f -> %.0f)"
+		% [before, attacker.power])
+	_check(seen > 0, "the finisher puts a fireball into the world (%d seen)" % seen)
+	await _pinned_ticks(40, attacker, victim)
+
+
+func _test_fireball_needs_power(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 5.0)
+	attacker.power = 0.0
+
+	var seen := await _run_chain_and_count_fireballs(attacker, victim)
+	_check(seen == 0, "an empty meter casts nothing -- you just get the kick")
+	await _pinned_ticks(30, attacker, victim)
+
+
+## Grab beats block, block beats strike, strike beats grab. A guard that covered
+## everything would make holding it strictly correct.
+func _test_grab_beats_block(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim)
+	var victim_source := _source(victim)
+	victim_source.hold(InputFrame.Action.BLOCK, true)
+	await _ticks(5)
+	_check(victim.get_state_id() == FighterState.BLOCK, "the victim is guarding")
+
+	var health := victim.health
+	_tap(_source(attacker), InputFrame.Action.GRAB)
+
+	# Wait for the grab's own startup rather than assuming a tick count.
+	var seized := false
+	for i in 40:
+		await get_tree().physics_frame
+		if victim.get_state_id() == FighterState.HITSTUN:
+			seized = true
+			break
+	_check(seized, "the grab takes hold through a guard (%s)" % victim.get_state_id())
+
+	# Ride it out to the throw.
+	var launched := false
+	for i in 120:
+		await get_tree().physics_frame
+		if victim.velocity.length() > 6.0:
+			launched = true
+			break
+	_check(launched, "the grab throws the victim")
+	_check(victim.health < health, "the throw does damage (%.1f -> %.1f)"
+		% [health, victim.health])
+	victim_source.release_all()
+	await _ticks(60)
+
+
+func _test_whiffed_grab_is_punishable(attacker: Fighter) -> void:
+	await _stage(attacker, attacker)
+	var grab := attacker.move_set.grab
+	_check(grab.ticks_recovery >= attacker.move_set.heavy.ticks_recovery,
+		"a whiffed grab recovers no faster than a heavy (%d vs %d ticks)"
+			% [grab.ticks_recovery, attacker.move_set.heavy.ticks_recovery])
+
+
+## Runs the whole punch-punch-kick chain and reports the most fireballs alive at
+## once. Pressing light only once would test the jab, not the finisher.
+func _run_chain_and_count_fireballs(attacker: Fighter, victim: Fighter) -> int:
+	var source := _source(attacker)
+	var seen := 0
+	for link in 3:
+		_tap(source, InputFrame.Action.LIGHT)
+		await _pinned_ticks(13, attacker, victim)
+		seen = maxi(seen, _count_fireballs_in_scene())
+	for i in 30:
+		await get_tree().physics_frame
+		seen = maxi(seen, _count_fireballs_in_scene())
+	return seen
+
+
+func _count_fireballs_in_scene() -> int:
+	var count := 0
+	for child in get_tree().current_scene.get_children():
+		if child is Fireball:
+			count += 1
+	return count
 
 
 # --- Rhythm ---

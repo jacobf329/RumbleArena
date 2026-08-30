@@ -22,6 +22,7 @@ const FIGHTER_SCENE := preload("res://scenes/fighter.tscn")
 @onready var _camera: ArenaCamera = $ArenaCamera
 @onready var _fighter_root: Node3D = $Fighters
 @onready var _hud: Control = $HUD/DebugHUD
+@onready var _match: MatchManager = $Match
 
 var _fighters: Array[Fighter] = []
 
@@ -29,6 +30,8 @@ var _fighters: Array[Fighter] = []
 func _ready() -> void:
 	_camera.bounds = _arena.camera_bounds
 	_camera.reset_focus()
+
+	_hud.bind_match(_match)
 
 	PlayerManager.player_joined.connect(_on_player_joined)
 	PlayerManager.join_enabled = true
@@ -45,6 +48,7 @@ func _on_player_joined(slot: PlayerSlot) -> void:
 	slot.fighter = fighter
 	_fighters.append(fighter)
 	_camera.add_target(fighter)
+	_match.register(fighter)
 	_hud.fighters = _fighters
 	_hud.add_meter(fighter)
 

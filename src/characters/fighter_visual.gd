@@ -16,6 +16,8 @@ const SOURCE_HUE := 0.0
 const MODEL_SCALE := 1.065
 ## Seconds of cross-fade between locomotion clips.
 const BLEND := 0.14
+## Metres (and radians) per second the flinch eases back by.
+const RECOIL_RECOVERY := 2.4
 
 ## Speed below which the fighter is standing still, in metres per second.
 const IDLE_SPEED := 0.35
@@ -26,6 +28,8 @@ const WALK_SPEED := 4.2
 @onready var _player: AnimationPlayer = $Model/AnimationPlayer
 
 var _material: ShaderMaterial
+var _recoil_offset := Vector3.ZERO
+var _recoil_tilt := 0.0
 var _current := &""
 ## Set while an attack clip is playing, so locomotion does not interrupt it.
 var _locked := false
@@ -112,6 +116,24 @@ func play_attack(clip: StringName, from: float, impact: float, to: float,
 	timer.timeout.connect(func() -> void:
 		if _locked and _current == clip:
 			_player.speed_scale = follow_through / maxf(remainder_seconds, 0.016))
+
+
+## Knocks the model back and tips it away from the blow, easing home over the
+## next few ticks. With no hit-reaction clip yet, this is what makes a hit read
+## as landing on somebody rather than just moving them.
+func recoil(direction: Vector3, strength: float) -> void:
+	var local := global_transform.basis.inverse() * direction
+	_recoil_offset = Vector3(local.x, 0.0, local.z).normalized() * clampf(strength, 0.0, 1.0) * 0.32
+	_recoil_tilt = clampf(strength, 0.0, 1.0) * 0.42
+
+
+func _process(delta: float) -> void:
+	if _recoil_offset == Vector3.ZERO and is_zero_approx(_recoil_tilt):
+		return
+	_recoil_offset = _recoil_offset.move_toward(Vector3.ZERO, RECOIL_RECOVERY * delta)
+	_recoil_tilt = move_toward(_recoil_tilt, 0.0, RECOIL_RECOVERY * delta)
+	_model.position = _recoil_offset
+	_model.rotation.x = -_recoil_tilt
 
 
 ## Freezes on the current pose. Used for reactions until there are clips for

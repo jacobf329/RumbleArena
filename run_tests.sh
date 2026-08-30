@@ -29,7 +29,7 @@ if grep -qE "SCRIPT ERROR|Parse Error|Failed loading resource" <<<"$import_outpu
 fi
 
 status=0
-for suite in m1_smoke_test m2_combat_test m3_interaction_test; do
+for suite in m1_smoke_test m2_combat_test m3_interaction_test m4_match_test; do
 	echo
 	echo "==> Running $suite"
 	if ! "$GODOT" --headless --path "$PROJECT" "res://tests/$suite.tscn"; then

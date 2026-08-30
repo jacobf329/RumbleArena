@@ -15,6 +15,9 @@ var _connected := false
 var _stepped := false
 var _on_beat := false
 var _hit_targets: Array = []
+## The fighter currently held by a grab, if this move is one.
+var _grabbed: Node = null
+var _fired := false
 
 
 func get_id() -> StringName:
@@ -38,6 +41,8 @@ func enter(_previous: StringName) -> void:
 	_connected = false
 	_stepped = false
 	_hit_targets.clear()
+	_grabbed = null
+	_fired = false
 	fighter.attacks_started += 1
 	fighter.begin_attack(_attack, _on_beat, _startup, _active + _recovery)
 
@@ -52,8 +57,18 @@ func physics_update(delta: float) -> StringName:
 		_stepped = true
 		fighter.apply_step(_attack.step_forward)
 
+	# Cast before resolving hits, not after. The other way round, the finisher's
+	# own connect credited power on the same tick the cost was checked, so the
+	# move paid for its own fireball and the meter meant nothing.
+	if _tick == _startup and not _fired:
+		_fired = true
+		fighter.try_launch_fireball(_attack)
+
 	if _tick >= _startup and _tick < _startup + _active:
 		_query_hits()
+
+	if _grabbed != null:
+		_carry_grabbed()
 
 	_tick += 1
 
@@ -75,11 +90,34 @@ func _query_hits() -> void:
 		if _hit_targets.has(victim):
 			continue
 		_hit_targets.append(victim)
+
+		if _attack.is_grab and victim is Fighter:
+			if fighter.seize(victim):
+				_grabbed = victim
+				_connected = true
+			continue
+
 		if fighter.deal_hit(_attack, victim):
 			_connected = true
 
 
+## Holds the victim in front of the attacker until the throw, then launches
+## them. A grab that is interrupted simply drops whoever was held.
+func _carry_grabbed() -> void:
+	if not is_instance_valid(_grabbed):
+		_grabbed = null
+		return
+	if _tick >= _attack.grab_release_tick:
+		fighter.throw_grabbed(_grabbed, _attack)
+		_grabbed = null
+		return
+	fighter.hold_grabbed(_grabbed)
+
+
 func exit() -> void:
+	if _grabbed != null and is_instance_valid(_grabbed):
+		fighter.release_grabbed(_grabbed)
+	_grabbed = null
 	fighter.end_attack_visual()
 
 

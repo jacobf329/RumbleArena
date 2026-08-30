@@ -1,9 +1,10 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://src/core/proving_ground.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/arenas/proving_ground.tscn" id="2_arena"]
 [ext_resource type="Script" path="res://src/camera/arena_camera.gd" id="3_camera"]
 [ext_resource type="Script" path="res://src/ui/debug_hud.gd" id="4_hud"]
+[ext_resource type="Script" path="res://src/core/match_manager.gd" id="5_match"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.1, 0.12, 0.2, 1)
@@ -20,6 +21,18 @@ sky = SubResource("Sky_main")
 ambient_light_source = 3
 ambient_light_energy = 0.55
 tonemap_mode = 2
+
+[sub_resource type="LabelSettings" id="LabelSettings_banner"]
+font_size = 74
+font_color = Color(1, 1, 1, 1)
+outline_size = 20
+outline_color = Color(0, 0, 0, 0.85)
+
+[sub_resource type="LabelSettings" id="LabelSettings_clock"]
+font_size = 40
+font_color = Color(0.92, 0.94, 1, 1)
+outline_size = 10
+outline_color = Color(0, 0, 0, 0.8)
 
 [sub_resource type="LabelSettings" id="LabelSettings_hint"]
 font_size = 22
@@ -45,6 +58,9 @@ light_energy = 1.05
 shadow_enabled = true
 
 [node name="Arena" parent="." instance=ExtResource("2_arena")]
+
+[node name="Match" type="Node" parent="."]
+script = ExtResource("5_match")
 
 [node name="Fighters" type="Node3D" parent="."]
 
@@ -89,6 +105,36 @@ label_settings = SubResource("LabelSettings_body")
 
 [node name="Controls" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
 label_settings = SubResource("LabelSettings_body")
+
+[node name="Clock" type="Label" parent="HUD/DebugHUD"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 18.0
+offset_right = 150.0
+offset_bottom = 78.0
+grow_horizontal = 2
+mouse_filter = 2
+horizontal_alignment = 1
+label_settings = SubResource("LabelSettings_clock")
+
+[node name="Banner" type="Label" parent="HUD/DebugHUD"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -640.0
+offset_top = -180.0
+offset_right = 640.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+horizontal_alignment = 1
+vertical_alignment = 1
+label_settings = SubResource("LabelSettings_banner")
 
 [node name="Meters" type="HBoxContainer" parent="HUD/DebugHUD"]
 anchors_preset = 12

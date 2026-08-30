@@ -14,6 +14,7 @@ var _failures: Array[String] = []
 var _checks := 0
 var _main: Node3D
 var _camera: ArenaCamera
+var match_manager: MatchManager
 
 
 func _ready() -> void:
@@ -21,6 +22,10 @@ func _ready() -> void:
 	add_child(_main)
 	await get_tree().physics_frame
 	_camera = _main.get_node("ArenaCamera")
+	match_manager = _main.get_node("Match")
+	# Suites that are not about match flow opt out of it; the M4 suite turns it
+	# back on explicitly.
+	match_manager.auto_start = false
 	PlayerManager.join_enabled = false
 	await _run()
 	_report()

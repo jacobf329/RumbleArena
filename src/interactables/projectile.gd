@@ -10,8 +10,17 @@ const LIFETIME := 2.5
 
 var velocity := Vector3.ZERO
 var damage := 8.0
-## Never hits whoever fired it, so a hacked turret cannot kill its own owner.
+## Never hits whoever fired it, so a hacked turret cannot kill its own owner,
+## and a fireball cannot be walked into by its own caster.
 var shooter: Node3D = null
+
+# Tunables rather than constants, so a heavier projectile is a configuration
+# and not a second copy of this class.
+var radius := RADIUS
+var lifetime := LIFETIME
+var knockback_speed := 5.0
+var hitstun := 16
+var hitstop := 4
 
 var _age := 0.0
 var _mesh: MeshInstance3D
@@ -31,8 +40,8 @@ static func spawn(parent: Node, at: Vector3, direction: Vector3, speed: float,
 
 func _ready() -> void:
 	var sphere := SphereMesh.new()
-	sphere.radius = RADIUS
-	sphere.height = RADIUS * 2.0
+	sphere.radius = radius
+	sphere.height = radius * 2.0
 	sphere.radial_segments = 8
 	sphere.rings = 4
 	_mesh = MeshInstance3D.new()
@@ -54,14 +63,14 @@ func _tint(colour: Color) -> void:
 
 func _physics_process(delta: float) -> void:
 	_age += delta
-	if _age >= LIFETIME:
+	if _age >= lifetime:
 		queue_free()
 		return
 
 	global_position += velocity * delta
 
 	var shape := SphereShape3D.new()
-	shape.radius = RADIUS + 0.25
+	shape.radius = radius + 0.25
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = shape
 	query.collision_mask = Layers.HURTBOX
@@ -85,8 +94,8 @@ func _strike(target: Node3D) -> void:
 	var result := HitResult.new()
 	result.attacker = shooter
 	result.damage = damage
-	result.hitstun_ticks = 16
-	result.hitstop_ticks = 4
+	result.hitstun_ticks = hitstun
+	result.hitstop_ticks = hitstop
 	result.position = global_position
-	result.knockback = velocity.normalized() * 5.0 + Vector3.UP * 2.0
+	result.knockback = velocity.normalized() * knockback_speed + Vector3.UP * 2.0
 	target.take_hit(result)
