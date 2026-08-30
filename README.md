@@ -43,11 +43,32 @@ pillar declares "STRENGTH 3" — the bruiser rips it out and throws it, the hack
 sees the prompt greyed out and learns what she isn't. Every character has at
 least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
 
-## Running it
+## Playing it
 
-Open the project folder in Godot 4.3 and press play. Press **A** on a gamepad or
-**Space** on the keyboard to take a seat; up to four can join at any time, and a
-pad can be unplugged and plugged back in without losing its fighter.
+1. **Install Godot 4.3** from [godotengine.org/download](https://godotengine.org/download).
+   Take the standard version, not .NET. It is a single executable — there is no
+   installer to run.
+2. **Get this branch:** `git clone` the repo and `git checkout claude/godot-ninja-game-96kjrj`,
+   or pull if you already have it.
+3. **Double-click a launcher** in the project folder:
+   - Windows → `Play RumbleArena.bat`
+   - macOS → `Play RumbleArena.command` (first time: right-click → Open, to get
+     past Gatekeeper)
+   - Linux → `play.sh`
+
+The launcher looks for Godot on your PATH, beside the project, in the usual
+install folders, and in Downloads. If it cannot find it, create a file called
+`godot_path.txt` next to the launcher whose only line is the full path to your
+Godot executable.
+
+**If it complains about Vulkan**, your GPU or its drivers cannot run the default
+renderer. Run the launcher with `--compat` to use OpenGL instead.
+
+You can also just open the project folder in Godot and press play.
+
+Press **A** on a gamepad or **Space** on the keyboard to take a seat; up to four
+can join at any time, and a pad can be unplugged and plugged back in without
+losing its fighter.
 
 Each seat gets a different stat block, so the movement asymmetry is apparent
 immediately: Kurogane is heavy and cannot double jump at all, Jinsoku is quick,
@@ -75,8 +96,22 @@ startup, more damage, and a flow streak that compounds while the chain stays
 clean. The window is about a quarter of a second, and hitstop is frozen out of
 it, so the freeze never eats your timing.
 
-A defeated fighter currently respawns at full health so playtesting continues —
-stocks and match flow arrive with M4.
+### What is rough, so you know it is not your setup
+
+- **There is no idle animation yet** — standing still plays the walk cycle
+  slowly, so fighters march on the spot.
+- **No hit-reaction clip**, so a fighter freezes on whatever pose it was caught
+  in when hit. It reads as stunned, which is nearly right, but it is a
+  placeholder.
+- **Knockdown tips the model over** rather than animating to the floor.
+- **A defeated fighter respawns at full health** so playtesting continues;
+  stocks and match flow arrive with M4.
+- **Space both joins and jumps**, so joining on the keyboard hops once.
+- `rigify_clip.glb` imports as 0.07s despite being 3.03s in the source, so it is
+  unused. Worth re-exporting.
+
+A hit-reaction, an idle and a knockdown/getup clip would be the three most
+valuable animations to add next.
 
 ## Testing
 

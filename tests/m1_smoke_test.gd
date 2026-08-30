@@ -36,6 +36,10 @@ func _run() -> void:
 	await _test_camera_has_clear_view(kurogane, yamabuki)
 	await _test_fall_out_respawns(kurogane)
 
+	_section("Real device input")
+	_test_every_action_is_bound()
+	await _test_keyboard_drives_a_fighter()
+
 
 ## Hand-authored Transform3D literals in a .tscn are row-major while basis.x/y/z
 ## are columns, so a matrix computed as columns silently becomes its own inverse.
@@ -289,6 +293,94 @@ func _test_fall_out_respawns(fighter: Fighter) -> void:
 	await _ticks(5)
 	_check(fighter.global_position.distance_to(spawn) < 1.0,
 		"falling out of the arena puts the fighter back on its spawn")
+
+
+# --- Real device input ---
+
+## Every test above drives a ScriptedInputSource, which bypasses the keyboard
+## and gamepad classes entirely -- so the one path a human actually uses is the
+## one path nothing else covers. A missing binding would ship as "the launcher
+## button does nothing" and no other test would notice.
+func _test_every_action_is_bound() -> void:
+	for action in InputFrame.Action.values():
+		var name: String = InputFrame.Action.keys()[action]
+		_check(KeyboardInputSource.BINDINGS.has(action),
+			"keyboard binds %s" % name)
+		_check(GamepadInputSource.BUTTON_BINDINGS.has(action)
+				or GamepadInputSource.TRIGGER_BINDINGS.has(action),
+			"gamepad binds %s" % name)
+
+
+## Presses real keys through the input singleton and follows them all the way
+## to a fighter moving: join, device assignment, InputFrame, state machine.
+func _test_keyboard_drives_a_fighter() -> void:
+	PlayerManager.join_enabled = true
+	var slot := PlayerManager.get_free_slot()
+	_check(slot != null, "a seat is free for the keyboard player")
+	if slot == null:
+		return
+
+	await _hold_key(KEY_SPACE, 3)
+	# Space joins and also jumps, so it has to be let go before anything is
+	# measured on the ground.
+	await _release_key(KEY_SPACE)
+	await _ticks(3)
+	_check(slot.is_active(), "pressing Space joins the keyboard player")
+	if not slot.is_active():
+		return
+	_check(slot.source is KeyboardInputSource,
+		"the keyboard player gets a KeyboardInputSource (%s)" % slot.source.get_display_name())
+
+	var fighter := slot.fighter as Fighter
+	_check(fighter != null, "joining spawns a fighter")
+	if fighter == null:
+		return
+
+	await _place(fighter, Vector3(-8, 0.5, CLEAR_LANE_Z))
+	await _settle_on_floor(fighter)
+	var start := fighter.global_position
+
+	# D is right; the fighter should move under its own steam.
+	await _hold_key(KEY_D, 40)
+	var travelled := fighter.global_position.distance_to(start)
+	_check(travelled > 2.0, "holding D actually moves the fighter (%.1f units)" % travelled)
+	_check(fighter.get_state_id() == FighterState.RUN,
+		"the keyboard player reaches the run state (%s)" % fighter.get_state_id())
+
+	await _release_key(KEY_D)
+	await _ticks(30)
+
+	var before := fighter.attacks_started
+	await _hold_key(KEY_J, 3)
+	await _ticks(6)
+	_check(fighter.attacks_started > before, "pressing J throws a punch")
+	await _release_key(KEY_J)
+	await _ticks(20)
+
+
+func _settle_on_floor(fighter: Fighter) -> void:
+	for i in 90:
+		await get_tree().physics_frame
+		if fighter.is_on_floor():
+			return
+
+
+func _hold_key(key: Key, ticks: int) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	event.keycode = key
+	event.pressed = true
+	Input.parse_input_event(event)
+	await _ticks(ticks)
+
+
+func _release_key(key: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	event.keycode = key
+	event.pressed = false
+	Input.parse_input_event(event)
+	await get_tree().physics_frame
 
 
 # --- Local helpers ---
