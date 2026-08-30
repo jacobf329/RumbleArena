@@ -43,3 +43,12 @@ no_depth_test = true
 font_size = 64
 outline_size = 20
 text = "P?"
+
+[node name="Prompt" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.02, 0)
+pixel_size = 0.0038
+billboard = 1
+no_depth_test = true
+font_size = 52
+outline_size = 18
+text = ""

@@ -43,6 +43,7 @@ func _ready() -> void:
 
 	await _roster_shot()
 	await _combat_shot()
+	await _permission_shot()
 
 	# Two fighters close together, to show the camera pushing in.
 	await _pose([Vector3(-2.5, 0.3, 11.0), Vector3(2.5, 0.3, 11.0),
@@ -95,6 +96,26 @@ func _combat_shot() -> void:
 		if connected[0]:
 			break
 	await _capture("m2_impact.png")
+
+
+## The teaching mechanism, side by side: the same pillar offered to the fighter
+## who qualifies and refused, with its requirement, to the one who does not.
+func _permission_shot() -> void:
+	var arena := _main.get_node("Arena")
+	var west: Node3D = arena.get_node("Interactables/PillarWest")
+	var east: Node3D = arena.get_node("Interactables/PillarEast")
+
+	await _pose([
+		west.global_position + Vector3(0, 0.3, 1.15),
+		east.global_position + Vector3(0, 0.3, 1.15),
+		Vector3(-9.0, 0.3, 12.0), Vector3(9.0, 0.3, 12.0),
+	])
+	# Kurogane (STR 5) faces the west pillar, Null (STR 1) faces the east one.
+	_fighters[0].snap_facing(Vector3.FORWARD)
+	_fighters[1].snap_facing(Vector3.FORWARD)
+	for tick in 20:
+		await get_tree().physics_frame
+	await _capture("m3_permission.png")
 
 
 func _pose(positions: Array) -> void:

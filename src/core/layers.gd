@@ -9,3 +9,5 @@ const WORLD := 1      ## Visible arena geometry.
 const FIGHTER := 2    ## Fighter bodies.
 const BARRIER := 4    ## Invisible containment; blocks movement, never sight.
 const HURTBOX := 8    ## What an attack's hitbox query looks for.
+const INTERACTABLE := 16  ## Things a fighter's interaction probe can find.
+const BREAKABLE := 32     ## Scenery an attack can damage, alongside fighters.

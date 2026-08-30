@@ -1,0 +1,32 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/interactables/hackable_turret.gd" id="1_turret"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_turret"]
+albedo_color = Color(0.2, 0.21, 0.25, 1)
+metallic = 0.4
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="Mesh_housing"]
+size = Vector3(0.9, 0.6, 0.9)
+
+[sub_resource type="SphereMesh" id="Mesh_light"]
+radius = 0.18
+height = 0.36
+
+[sub_resource type="SphereShape3D" id="Shape_turret"]
+radius = 5.5
+
+[node name="Turret" type="Area3D"]
+script = ExtResource("1_turret")
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_turret")
+
+[node name="Housing" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_housing")
+material_override = SubResource("Mat_turret")
+
+[node name="Light" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.36, 0)
+mesh = SubResource("Mesh_light")

@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/interactables/breakable.gd" id="1_breakable"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/debris.tscn" id="2_debris"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_rack"]
+albedo_color = Color(0.24, 0.27, 0.33, 1)
+metallic = 0.3
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="Mesh_rack"]
+size = Vector3(1.0, 1.8, 0.8)
+
+[sub_resource type="BoxShape3D" id="Shape_rack"]
+size = Vector3(1.1, 1.8, 0.9)
+
+[node name="ServerRack" type="Area3D"]
+script = ExtResource("1_breakable")
+display_name = "Server Rack"
+break_tier = 2
+max_health = 30.0
+debris_count = 2
+debris_scene = ExtResource("2_debris")
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("Shape_rack")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("Mesh_rack")
+material_override = SubResource("Mat_rack")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("Shape_rack")

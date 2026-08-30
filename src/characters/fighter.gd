@@ -32,6 +32,8 @@ const STAMINA_REGEN_DELAY := 0.35
 const HIT_FLASH_TICKS := 6
 ## Drag applied to knockback, so a hit carries rather than stopping dead.
 const HITSTUN_DRAG := 4.0
+## How far in front of a fighter the interaction probe reaches.
+const INTERACT_REACH := 1.7
 ## How much control an attack leaves you: almost none.
 const ATTACK_DRIFT_DRAG := 30.0
 
@@ -55,6 +57,12 @@ var max_stamina: float = 100.0
 ## Set immediately before a transition into ATTACK / HITSTUN.
 var pending_attack: AttackDef
 var pending_hitstun: int = 0
+
+## What this fighter is holding, and what it would act on if INTERACT were
+## pressed right now. The target is tracked even when the fighter does not
+## qualify, because a refused prompt is how the stat system teaches itself.
+var carried: Liftable = null
+var interaction_target: Interactable = null
 
 var _states: Dictionary = {}
 var _state: FighterState
@@ -100,6 +108,7 @@ var _base_color := Color.WHITE
 
 @onready var _visual: FighterVisual = $Visual
 @onready var _nameplate: Label3D = $Nameplate
+@onready var _prompt: Label3D = $Prompt
 
 
 func _ready() -> void:
@@ -117,9 +126,13 @@ func _ready() -> void:
 	_air_dashes_left = 1
 
 	_hitbox_query.shape = _hitbox_shape
-	_hitbox_query.collision_mask = Layers.HURTBOX
+	_hitbox_query.collision_mask = Layers.HURTBOX | Layers.BREAKABLE
 	_hitbox_query.collide_with_areas = true
 	_hitbox_query.collide_with_bodies = false
+
+	# Turrets and other arena logic look fighters up by group rather than by
+	# walking the scene tree.
+	add_to_group(&"fighters")
 
 	_build_states()
 	_apply_presentation()
@@ -166,6 +179,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_update_timers(delta)
+	_update_interaction()
 
 	var next := _state.physics_update(delta)
 	if next != FighterState.STAY:
@@ -183,6 +197,80 @@ func _physics_process(delta: float) -> void:
 		respawn()
 
 
+# --- Interaction ---
+
+## Finds what this fighter is standing in front of and acts on an INTERACT press.
+## Handled here rather than in each state so that picking something up does not
+## need a branch in every movement state.
+func _update_interaction() -> void:
+	interaction_target = null if carried != null else _probe_for_interactable()
+
+	if not get_input().is_just_pressed(InputFrame.Action.INTERACT):
+		return
+	if _state_id not in [FighterState.IDLE, FighterState.RUN, FighterState.AIR]:
+		return
+
+	if carried != null:
+		var held := carried
+		carried = null
+		held.throw_from(self)
+		return
+
+	if interaction_target != null and interaction_target.can_use(self):
+		if interaction_target.use(self):
+			var liftable := interaction_target as Liftable
+			if liftable != null:
+				carried = liftable
+
+
+## Nearest interactable in front of the fighter. Objects the fighter cannot use
+## are still returned: the prompt shows them greyed out with the requirement.
+func _probe_for_interactable() -> Interactable:
+	var shape := SphereShape3D.new()
+	shape.radius = INTERACT_REACH
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.collision_mask = Layers.INTERACTABLE
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	query.transform = Transform3D(
+		Basis.IDENTITY,
+		global_position + Vector3.UP * 0.9 + get_facing_direction() * 0.5)
+
+	var best: Interactable = null
+	var best_distance := INF
+	for contact in get_world_3d().direct_space_state.intersect_shape(query, 8):
+		var candidate := contact["collider"] as Interactable
+		if candidate == null or not candidate.is_offered(self):
+			continue
+		var distance := global_position.distance_to(candidate.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = candidate
+	return best
+
+
+## Carrying something heavy slows you down; that is the cost that makes picking
+## a pillar up a decision rather than a free upgrade.
+func _speed_multiplier() -> float:
+	return Liftable.CARRY_SPEED_PENALTY if carried != null else 1.0
+
+
+func _update_prompt() -> void:
+	if _prompt == null:
+		return
+	if carried != null:
+		_prompt.text = "Throw %s" % carried.display_name
+		_prompt.modulate = Color(0.85, 0.95, 1.0)
+	elif interaction_target != null:
+		_prompt.text = interaction_target.prompt_text(self)
+		# Refusals are dimmed rather than hidden: learning what you cannot do is
+		# how you learn what the other ninjas can.
+		_prompt.modulate = Color(0.9, 1.0, 0.9) if interaction_target.can_use(self) 			else Color(0.62, 0.60, 0.58)
+	else:
+		_prompt.text = ""
+
+
 ## Attacks drive their own clip from begin_attack; reactions hold whatever pose
 ## they were caught in, since there is no hit-reaction clip yet. Everything else
 ## picks a locomotion clip from how fast the fighter is actually moving.
@@ -198,6 +286,7 @@ func _update_visual() -> void:
 			_visual.release_attack()
 			_visual.play_locomotion(
 				Vector2(velocity.x, velocity.z).length(), not is_on_floor())
+	_update_prompt()
 
 
 func _update_timers(delta: float) -> void:
@@ -319,7 +408,8 @@ func apply_variable_jump_cut() -> void:
 
 
 func apply_ground_acceleration(direction: Vector3, delta: float) -> void:
-	var target := direction * character_def.get_max_speed() * get_move_strength()
+	var target := direction * character_def.get_max_speed() \
+		* get_move_strength() * _speed_multiplier()
 	var rate := character_def.get_acceleration() * delta
 	velocity.x = move_toward(velocity.x, target.x, rate)
 	velocity.z = move_toward(velocity.z, target.z, rate)
@@ -332,7 +422,8 @@ func apply_ground_friction(delta: float) -> void:
 
 
 func apply_air_acceleration(direction: Vector3, delta: float) -> void:
-	var target := direction * character_def.get_max_speed() * get_move_strength()
+	var target := direction * character_def.get_max_speed() \
+		* get_move_strength() * _speed_multiplier()
 	var rate := character_def.get_acceleration() * character_def.get_air_control() * delta
 	velocity.x = move_toward(velocity.x, target.x, rate)
 	velocity.z = move_toward(velocity.z, target.z, rate)
@@ -416,6 +507,8 @@ func request_dash() -> bool:
 ## Starts a fresh attack (not a cancel). Grounded and airborne fighters draw
 ## from different halves of the moveset.
 func request_attack() -> bool:
+	if carried != null:
+		return false  # hands full; throw it first
 	var action := _peek_attack_buffer()
 	if action == -1:
 		return false
@@ -553,7 +646,14 @@ func query_hitbox(attack: AttackDef) -> Array:
 
 	var victims: Array = []
 	for contact in get_world_3d().direct_space_state.intersect_shape(_hitbox_query, 8):
-		var hurtbox := contact["collider"] as Hurtbox
+		var collider: Object = contact["collider"]
+
+		var breakable := collider as Breakable
+		if breakable != null:
+			victims.append(breakable)
+			continue
+
+		var hurtbox := collider as Hurtbox
 		if hurtbox == null:
 			continue
 		var other := hurtbox.fighter as Fighter
@@ -564,8 +664,14 @@ func query_hitbox(attack: AttackDef) -> Array:
 
 ## Resolves one connection. Returns whether it actually landed, which is what
 ## gates the confirm cancels.
-func deal_hit(attack: AttackDef, victim: Fighter) -> bool:
-	if victim.is_invulnerable():
+## Resolves a connection against a fighter or a piece of breakable scenery.
+func deal_hit(attack: AttackDef, target: Node) -> bool:
+	var breakable := target as Breakable
+	if breakable != null:
+		return _hit_breakable(attack, breakable)
+
+	var victim := target as Fighter
+	if victim == null or victim.is_invulnerable():
 		return false
 
 	var contact: Vector3 = global_position.lerp(victim.global_position, 0.5) + Vector3.UP * 1.05
@@ -603,6 +709,22 @@ func take_hit(result: HitResult) -> void:
 	if health <= 0.0:
 		defeated.emit()
 		respawn()
+
+
+## Scenery too tough for this fighter throws a dull spark and takes nothing, so
+## the refusal reads as "not strong enough" rather than as a missed hit.
+func _hit_breakable(attack: AttackDef, breakable: Breakable) -> bool:
+	var amount := CombatMath.damage(attack, character_def) * strike_scale
+	if breakable.take_attack(amount, self):
+		HitSpark.spawn(get_tree().current_scene,
+			breakable.global_position + Vector3.UP * 0.8, Color(1, 0.85, 0.55), amount)
+		apply_hitstop(attack.ticks_hitstop)
+		return true
+
+	HitSpark.spawn(get_tree().current_scene,
+		breakable.global_position + Vector3.UP * 0.8, Color(0.55, 0.58, 0.62), 4.0)
+	apply_hitstop(3)
+	return false
 
 
 func _spawn_feedback(result: HitResult) -> void:
@@ -738,6 +860,9 @@ func setup(player_slot: PlayerSlot, definition: CharacterDef, spawn: Vector3) ->
 
 
 func respawn() -> void:
+	if carried != null:
+		carried.release()
+		carried = null
 	global_position = spawn_point
 	velocity = Vector3.ZERO
 	health = max_health

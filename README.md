@@ -9,12 +9,18 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-**M2 complete, plus the character model and rhythm combos** — four players join
-with gamepads or keyboard and fight in a grey-box arena under a single shared
-camera: punch-punch-kick chains, heavy and launcher confirms, blocking, dodging,
-juggles, knockdowns and wall splats, with timing-based rhythm bonuses.
-Stat-gated environmental interaction starts at M3. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md).
+**M3 mostly complete** — four players join with gamepads or keyboard and fight
+in a grey-box arena under a single shared camera: punch-punch-kick chains, heavy
+and launcher confirms, blocking, dodging, juggles, knockdowns and wall splats,
+with timing-based rhythm bonuses. The arena is stat-gated: Kurogane rips out
+concrete pillars and throws them, Null hacks the ceiling turrets, and each is
+refused what the other can do. Climbing is the one M3 item still outstanding.
+See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+The same pillar, offered to the fighter who qualifies and refused — with the
+requirement named — to the one who does not:
+
+![The permission rule](docs/images/m3-permission.png)
 
 One mesh, one texture, four players — the shader rotates the hue of the crimson
 only, so skin and armour stay put:
@@ -113,6 +119,20 @@ cancel out of a move that actually connected, so whiffing a heavy costs you the
 full recovery. Block covers the front only. Dodge has invulnerability frames and
 costs stamina. Knocking someone into a wall splats them and hands you a juggle.
 
+**The arena is a weapon.** Stand near something and a prompt appears above you.
+If your stats do not clear it, the prompt still appears — greyed out, naming what
+you would need. Being refused is how you learn the roster.
+
+| | Gate | Who |
+|---|---|---|
+| Concrete pillar — lift and throw | STRENGTH 4 | Kurogane only |
+| Server rack — break for debris | STRENGTH 2 | everyone but Null |
+| Ceiling turret — hack | TECH 3 | Null only |
+| Debris — lift and throw | STRENGTH 1 | everyone |
+
+Carrying something costs 62% of your speed and the use of your fists until you
+throw it. A hacked turret fires on everyone except the hacker.
+
 **Rhythm.** Mashing combos fine — it just earns nothing. Time each follow-up to
 the moment the previous move becomes cancellable and it scores *on beat*: faster
 startup, more damage, and a flow streak that compounds while the chain stays
@@ -159,7 +179,7 @@ headlessly with no hardware.
 | `assets/characters/` | Ninja model, stripped animation clips, hue shader |
 | `src/combat/` | Frame data, movesets, hit resolution, damage formulas |
 | `src/powers/` | Power base class and per-character powers |
-| `src/interactables/` | Liftable, Climbable, Hackable, Breakable, Hazard |
+| `src/interactables/` | Permission rule, liftables, breakables, hackable turrets |
 | `src/camera/` | Shared smart arena camera |
 | `src/ui/` | HUD, character select, contextual prompts |
 | `src/arenas/` | Arena scenes |

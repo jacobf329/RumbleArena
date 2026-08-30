@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/interactables/liftable.gd" id="1_liftable"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_debris"]
+albedo_color = Color(0.55, 0.5, 0.44, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_debris"]
+size = Vector3(0.55, 0.55, 0.55)
+
+[sub_resource type="BoxShape3D" id="Shape_debris"]
+size = Vector3(0.6, 0.6, 0.6)
+
+[node name="Debris" type="Area3D"]
+script = ExtResource("1_liftable")
+display_name = "Debris"
+mass_class = 1
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_debris")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_debris")
+material_override = SubResource("Mat_debris")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("Shape_debris")

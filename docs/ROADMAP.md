@@ -158,19 +158,65 @@ builder. Naming a slice of it in an `AttackDef` is all that connects it to a mov
 
 ---
 
-## M3 — Stats and the interactive arena
+## M3 — Stats and the interactive arena — **MOSTLY COMPLETE**
 **Risk under test:** does stat-gated interaction read as cool rather than arbitrary?
 
-- [ ] `CharacterDef` resource with the six stats
-- [ ] `Interactable` base + permission rule (`required_stat` / `required_tier`)
-- [ ] Liftable: pick up, carry (movement penalty), throw
-- [ ] Breakable, spawning debris
-- [ ] Climbable: mantle, wall-climb
-- [ ] Hackable + Hazard: turrets that can be re-targeted
-- [ ] `InteractionProbe` + contextual prompt UI, **including denied prompts**
+- [x] `CharacterDef` resource with the six stats
+- [x] `Interactable` base + permission rule (`required_stat` / `required_tier`)
+- [x] Liftable: pick up, carry (movement penalty), throw for damage
+- [x] Breakable, spawning debris anyone can then throw
+- [x] Hackable turrets that fire on everyone but the hacker
+- [x] Interaction probe + contextual prompt, **including denied prompts**
+- [ ] Climbable: mantle, wall-climb — still outstanding
 
-**Playable result:** the arena is a weapon. Different stats visibly open
-different options.
+**Playable result:** the arena is a weapon, and which weapon depends on who you
+picked.
+
+### The permission matrix
+
+Every interactable is gated to exactly one of the four staged characters, or to
+everyone. That is the whole teaching design: you learn the system by being
+refused, and learn the roster by seeing what you are refused.
+
+| | Pillar (STR 4) | Rack (STR 2) | Turret (TECH 3) | Debris (STR 1) |
+|---|---|---|---|---|
+| **Kurogane** STR 5 / TECH 1 | ✓ | ✓ | — | ✓ |
+| **Null** STR 1 / TECH 5 | — | — | ✓ | ✓ |
+| **Jinsoku** STR 2 | — | ✓ | — | ✓ |
+| **Yamabuki** STR 2 | — | ✓ | — | ✓ |
+
+Null is the only character who can hack, and the only one who can neither lift a
+pillar nor break a rack. A STRENGTH 1 fighter who loses every straight exchange
+can still turn the room's turrets on everyone else, which is what makes the
+stat spread worth playing rather than merely worth reading.
+
+### Decisions worth remembering
+
+- **`can_use` and `is_offered` are separate questions.** An object a fighter
+  cannot use is still targeted and still shows its prompt, greyed out, naming the
+  requirement. Hiding it would have been less code and a worse game: being
+  refused is how the player learns both the stat system and what the other
+  ninjas can do.
+- **Mass class *is* the STRENGTH tier.** "How heavy is it" and "who can lift it"
+  are one number rather than two that can drift apart.
+- **Breaking is not a prompt.** You destroy scenery by hitting it, so a Breakable
+  is deliberately not an Interactable. The refusal still has to read, though, so
+  a fighter too weak to break something gets a dull grey spark rather than
+  silence.
+- **Turrets are hacked at range.** They hang from the ceiling, and requiring the
+  hacker to climb up and touch one would be bad fiction and — as the tests
+  caught — physically unreachable for the one character meant to use them.
+- **Carrying costs speed and your fists.** A pillar is a decision, not a free
+  upgrade: you move at 62% speed and cannot attack until you throw it.
+- **Dying returns what you were holding.** Otherwise a heavy prop could be
+  removed from the match by carrying it off a ledge.
+
+### What M3 turned up
+
+- **A check that passed for the wrong reason.** "Kurogane cannot hack the
+  turret" passed while the turret was unreachable by anyone — nothing on the
+  floor could target something on the ceiling. It now asserts he is in range
+  first, so the gate is what makes it pass.
 
 ---
 

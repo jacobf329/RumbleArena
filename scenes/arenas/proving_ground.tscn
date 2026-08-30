@@ -1,6 +1,9 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://src/arenas/arena.gd" id="1_arena"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/pillar.tscn" id="2_pillar"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/server_rack.tscn" id="3_rack"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/turret.tscn" id="4_turret"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.29, 0.3, 0.34, 1)
@@ -125,6 +128,29 @@ material_override = SubResource("Mat_wall")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 0.6, 0)
 mesh = SubResource("Lip_ew")
 material_override = SubResource("Mat_wall")
+
+[node name="Interactables" type="Node3D" parent="."]
+
+[node name="PillarWest" parent="Interactables" instance=ExtResource("2_pillar")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, 9.5)
+
+[node name="PillarEast" parent="Interactables" instance=ExtResource("2_pillar")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 9.5)
+
+[node name="RackWest" parent="Interactables" instance=ExtResource("3_rack")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -2)
+
+[node name="RackEast" parent="Interactables" instance=ExtResource("3_rack")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -2)
+
+[node name="RackNorth" parent="Interactables" instance=ExtResource("3_rack")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -12)
+
+[node name="TurretWest" parent="Interactables" instance=ExtResource("4_turret")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 5.2, -3)
+
+[node name="TurretEast" parent="Interactables" instance=ExtResource("4_turret")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 5.2, -3)
 
 [node name="SpawnPoints" type="Node3D" parent="."]
 
