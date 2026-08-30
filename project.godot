@@ -1,0 +1,32 @@
+; Engine configuration file.
+; RumbleArena — 4-player local versus ninja arena brawler.
+
+config_version=5
+
+[application]
+
+config/name="RumbleArena"
+config/description="A 4-player local versus arena brawler. Named ninjas with super powers tear each other, and the arena itself, apart."
+config/features=PackedStringArray("4.3", "Forward Plus")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+
+[physics]
+
+3d/default_gravity=24.0
+common/physics_ticks_per_second=60
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+anti_aliasing/quality/msaa_3d=2
