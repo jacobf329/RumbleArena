@@ -78,6 +78,29 @@ that cache every `class_name` type is unresolved: the autoloads fail to compile
 and nothing responds to input, while the arena still renders. Both launchers do
 this import automatically when the cache is missing.
 
+### Getting updates
+
+A downloaded zip is a snapshot — it never changes on its own. To pull in
+whatever has landed since:
+
+- **Windows** — double-click **`Update RumbleArena.bat`** in the game folder.
+- **macOS** — double-click **`Update RumbleArena.command`**.
+- **Linux** — run `./update.sh`.
+
+It checks what is published, prints the list of changes you are about to get,
+downloads them, and re-imports the assets. Your Godot download, your Desktop
+shortcut and the asset cache all survive; only the game itself is replaced.
+`--force` re-downloads even when you are already current.
+
+The play launcher also checks on startup and prints one line if there is
+something new. It is bounded to a few seconds and does not care if you are
+offline; drop a file called `no_update_check.txt` next to the launcher to turn
+it off.
+
+If you got the game with `git clone` rather than as a zip, the updater stops and
+tells you to `git pull` instead — overwriting a clone's files from a zip would
+strip its history and throw away anything you had changed.
+
 ### Other platforms, or doing it by hand
 
 1. **Install Godot 4.3** from [godotengine.org/download](https://godotengine.org/download).
@@ -268,6 +291,7 @@ headlessly with no hardware.
 | Path | Contents |
 |---|---|
 | `docs/` | Design document and roadmap |
+| `tools/` | Setup, updater and dev scripts (Godot download, shortcuts, capture) |
 | `src/core/` | Match flow, game state, player management |
 | `src/input/` | `InputSource` / `InputFrame` abstraction (keyboard + gamepad) |
 | `src/characters/` | `CharacterDef` resources, fighter, state machine, roster |

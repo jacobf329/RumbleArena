@@ -1,4 +1,6 @@
-# Creates a RumbleArena shortcut on the current user's Desktop.
+# Creates the RumbleArena shortcuts on the current user's Desktop: one to play,
+# one to update. The updater gets its own icon because a notice you have to go
+# hunting through a folder to act on is a notice most people ignore.
 # Called by "Create Desktop Shortcut.bat"; not usually run directly.
 param([Parameter(Mandatory = $true)][string]$ProjectDir)
 
@@ -13,16 +15,21 @@ if (-not (Test-Path $launcher)) {
 }
 
 $desktop = [Environment]::GetFolderPath('Desktop')
-$target = Join-Path $desktop 'RumbleArena.lnk'
-
-$shell = New-Object -ComObject WScript.Shell
-$link = $shell.CreateShortcut($target)
-$link.TargetPath = $launcher
-$link.WorkingDirectory = $project
-$link.Description = 'RumbleArena - 4-player ninja arena brawler'
-
 $icon = Join-Path $project 'icon.ico'
-if (Test-Path $icon) { $link.IconLocation = $icon }
+$shell = New-Object -ComObject WScript.Shell
 
-$link.Save()
-Write-Host "Created: $target" -ForegroundColor Green
+function New-Link($name, $targetPath, $description) {
+	if (-not (Test-Path $targetPath)) { return }
+	$path = Join-Path $desktop $name
+	$link = $shell.CreateShortcut($path)
+	$link.TargetPath = $targetPath
+	$link.WorkingDirectory = $project
+	$link.Description = $description
+	if (Test-Path $icon) { $link.IconLocation = $icon }
+	$link.Save()
+	Write-Host "Created: $path" -ForegroundColor Green
+}
+
+New-Link 'RumbleArena.lnk' $launcher 'RumbleArena - 4-player ninja arena brawler'
+New-Link 'Update RumbleArena.lnk' (Join-Path $project 'Update RumbleArena.bat') `
+	'Download the latest version of RumbleArena' 

@@ -11,7 +11,7 @@ echo.
 echo   This does two things:
 echo     1. Makes sure Godot 4.3 is on this PC
 echo     2. Prepares the game's assets (first run only)
-echo     3. Puts a RumbleArena shortcut on your Desktop
+echo     3. Puts RumbleArena and its updater on your Desktop
 echo.
 
 call "%~dp0tools\find_godot.bat"
@@ -59,9 +59,18 @@ echo   [3/3] Creating the Desktop shortcut...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\create_shortcut.ps1" -ProjectDir "%~dp0."
 if errorlevel 1 goto :noshortcut
 
+REM Note which version this is, so the launcher can tell you when there is a
+REM newer one. Best effort -- an offline setup just stays quiet about updates.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\update.ps1" -ProjectDir "%~dp0." -RecordOnly >nul 2>&1
+
 echo.
-echo   Done. There is now a RumbleArena icon on your Desktop.
+echo   Done. There is now a RumbleArena icon on your Desktop, and an
+echo   "Update RumbleArena" icon next to it.
 echo   Press A on a gamepad, or SPACE on the keyboard, to join.
+echo.
+echo   When there is a newer version, the launcher will say so. Click the
+echo   Update icon to get it - it keeps your Godot download and your
+echo   shortcuts, and only replaces the game.
 echo.
 set "PLAY="
 set /p "PLAY=  Launch the game now? [Y/N] "

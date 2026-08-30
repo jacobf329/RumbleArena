@@ -11,3 +11,6 @@ export_presets.cfg
 .DS_Store
 Thumbs.db
 godot_path.txt
+
+version.json
+no_update_check.txt

@@ -27,6 +27,14 @@ echo.
 set "EXTRA="
 if /i "%~1"=="--compat" set "EXTRA=--rendering-driver opengl3 --rendering-method gl_compatibility"
 
+REM One line if there is a newer version, nothing otherwise. Bounded to a few
+REM seconds and never fatal: being offline must not stand between somebody and
+REM their game. Drop a file called no_update_check.txt in this folder to skip it.
+if exist "%~dp0no_update_check.txt" goto :nocheck
+if not exist "%~dp0tools\check_update.ps1" goto :nocheck
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\check_update.ps1" -ProjectDir "%~dp0." 2>nul
+
+:nocheck
 echo   Using: !GODOT_EXE!
 if defined EXTRA echo   Compatibility renderer (OpenGL)
 echo   Press A on a gamepad, or SPACE on the keyboard, to join.
