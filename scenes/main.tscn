@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://src/core/proving_ground.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/arenas/proving_ground.tscn" id="2_arena"]
@@ -40,6 +40,12 @@ font_size = 22
 font_color = Color(1, 1, 1, 1)
 outline_size = 6
 outline_color = Color(0, 0, 0, 0.75)
+
+[sub_resource type="LabelSettings" id="LabelSettings_canary"]
+font_size = 26
+font_color = Color(1, 0.55, 0.45, 1)
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.85)
 
 [sub_resource type="LabelSettings" id="LabelSettings_body"]
 font_size = 19
@@ -97,6 +103,15 @@ theme_override_constants/margin_bottom = 22
 size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 14
+
+[node name="ScriptCanary" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
+text = "THE GAME'S SCRIPTS DID NOT LOAD - nothing will respond to input.
+
+Godot's class cache is stale or missing, usually because a folder was
+updated by hand. Close this window and run Setup.bat (Windows) or
+./play.sh (macOS/Linux) again - both rebuild the cache automatically.
+If it keeps happening, run Diagnose.bat and send me what it saves."
+label_settings = SubResource("LabelSettings_canary")
 
 [node name="JoinHint" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
 text = "Press [A] on a gamepad, or [SPACE] on the keyboard, to join."

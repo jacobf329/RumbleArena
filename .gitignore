@@ -14,3 +14,6 @@ godot_path.txt
 
 version.json
 no_update_check.txt
+setup_log.txt
+boot_log.txt
+diagnostics.txt

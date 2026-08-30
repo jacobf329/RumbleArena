@@ -8,6 +8,7 @@ const JOIN_HINT := "Press [A] on a gamepad, or [SPACE] on the keyboard, to join.
 
 const PLAYER_METER := preload("res://scenes/ui/player_meter.tscn")
 
+@onready var _canary: Label = $Margin/Rows/ScriptCanary
 @onready var _meters: HBoxContainer = $Meters
 @onready var _join_label: Label = $Margin/Rows/JoinHint
 @onready var _players_label: Label = $Margin/Rows/Players
@@ -58,7 +59,27 @@ func _on_phase_changed(phase: MatchManager.Phase) -> void:
 		_flash = 1.2
 
 
+## The warning the scene authors visible, and which this is the only thing that
+## takes down.
+##
+## A broken class cache breaks the game in two different ways depending on which
+## script it catches: sometimes this HUD script itself will not compile, in which
+## case _process never runs and the warning simply stays up; sometimes it
+## compiles but PlayerManager does not, and then the HUD looks normal while no
+## button does anything. Checking for the autoload covers the second, and not
+## running at all covers the first. Between them there is no way to reach the
+## join screen with a dead input system and no explanation -- which is exactly
+## what happened twice, and is unreadable without this.
+func _input_system_is_alive() -> bool:
+	return get_node_or_null(^"/root/PlayerManager") != null
+
+
 func _process(delta: float) -> void:
+	if not _input_system_is_alive():
+		_canary.show()
+		return
+	_canary.hide()
+
 	_flash = maxf(_flash - delta, 0.0)
 	_update_match_ui()
 

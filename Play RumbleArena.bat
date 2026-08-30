@@ -11,15 +11,41 @@ echo.
 call "%~dp0tools\find_godot.bat"
 if not defined GODOT_EXE goto :missing
 
-REM A freshly downloaded copy has no .godot folder, so Godot has not yet
-REM imported the assets or built its global class cache. Launching the game
-REM without that cache leaves every class_name type unresolved: the autoloads
-REM fail to compile and NOTHING responds to input. The editor pass builds it.
+REM Godot has to have imported the assets and registered every class_name
+REM before the game is launchable: without that cache the autoloads fail to
+REM compile and NOTHING responds to input, while the arena still renders
+REM perfectly. The test is whether the cache MATCHES the scripts on disk, not
+REM merely whether a cache exists -- replacing a game folder by hand leaves the
+REM old one behind, and an old cache that has never heard of a new class is
+REM exactly as broken as no cache at all. Preflight also prints the update
+REM notice, so the launcher pays for only one PowerShell start.
+REM If the preflight script itself is missing, this install is mangled; fall
+REM back to the old "is there a cache at all" test rather than refusing to run.
+if not exist "%~dp0tools\preflight.ps1" goto :legacy_check
+if exist "%~dp0no_update_check.txt" goto :preflight_quiet
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0."
+goto :preflight_done
+:preflight_quiet
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
+:preflight_done
+if not errorlevel 2 goto :ready
+goto :prepare
+
+:legacy_check
 if exist "%~dp0.godot\global_script_class_cache.cfg" goto :ready
-echo   First run: preparing assets. This takes a minute or two,
-echo   and only happens once.
+
+:prepare
+
+echo   Preparing assets. This takes a minute or two, and only happens
+echo   when the game files have changed.
 echo.
-"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit
+"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit > "%~dp0setup_log.txt" 2>&1
+
+REM An import pass that fails still exits 0 and still leaves a .godot folder
+REM behind, so "we ran it" is not evidence that it worked. Checking is what
+REM turns a game that silently ignores the controller into a message saying why.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
+if errorlevel 2 goto :notprepared
 echo   Ready.
 echo.
 
@@ -27,14 +53,6 @@ echo.
 set "EXTRA="
 if /i "%~1"=="--compat" set "EXTRA=--rendering-driver opengl3 --rendering-method gl_compatibility"
 
-REM One line if there is a newer version, nothing otherwise. Bounded to a few
-REM seconds and never fatal: being offline must not stand between somebody and
-REM their game. Drop a file called no_update_check.txt in this folder to skip it.
-if exist "%~dp0no_update_check.txt" goto :nocheck
-if not exist "%~dp0tools\check_update.ps1" goto :nocheck
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\check_update.ps1" -ProjectDir "%~dp0." 2>nul
-
-:nocheck
 echo   Using: !GODOT_EXE!
 if defined EXTRA echo   Compatibility renderer (OpenGL)
 echo   Press A on a gamepad, or SPACE on the keyboard, to join.
@@ -52,6 +70,20 @@ echo       "Play RumbleArena.bat" --compat
 echo.
 
 :failed_message
+echo   Press any key to close.
+pause >nul
+exit /b 1
+
+:notprepared
+echo.
+echo   Preparing the assets did not work, so the game would start with
+echo   nothing responding to input. Rather than launch it like that:
+echo.
+echo     1. Delete the .godot folder in this game folder, then run this again.
+echo     2. If that fails too, run Diagnose.bat and send me what it saves.
+echo.
+echo   The details are in setup_log.txt next to this launcher.
+echo.
 echo   Press any key to close.
 pause >nul
 exit /b 1

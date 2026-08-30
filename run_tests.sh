@@ -28,6 +28,16 @@ if grep -qE "SCRIPT ERROR|Parse Error|Failed loading resource" <<<"$import_outpu
 	exit 1
 fi
 
+# The launchers refuse to start a game whose class cache does not match the
+# scripts on disk. That guard is invisible to every suite below -- the import
+# pass above makes the cache current before anything could notice otherwise --
+# so it gets checked directly.
+echo
+echo "==> Checking the stale-cache guard"
+if ! GODOT="$GODOT" "$PROJECT/tools/check_cache_guard.sh"; then
+	exit 1
+fi
+
 status=0
 for suite in m1_smoke_test m2_combat_test m3_interaction_test m4_match_test m5_bot_test; do
 	echo

@@ -71,12 +71,19 @@ Setup finds Godot, offers to download it if you do not have it, prepares the
 game's assets, and puts a RumbleArena shortcut on your Desktop. After that you
 launch from the Desktop icon.
 
-The asset step takes a minute or two and only happens once. **Do not skip it by
-launching Godot by hand on a fresh copy** — a freshly downloaded project has no
-`.godot` folder, so Godot has not yet built its global class cache, and without
-that cache every `class_name` type is unresolved: the autoloads fail to compile
-and nothing responds to input, while the arena still renders. Both launchers do
-this import automatically when the cache is missing.
+The asset step takes a minute or two and happens whenever the game files have
+changed. **Do not skip it by launching Godot by hand** — without an up-to-date
+class cache every `class_name` type is unresolved: the autoloads fail to compile
+and nothing responds to input, while the arena still renders perfectly. Both
+launchers check for this and rebuild automatically.
+
+The check is whether the cache *matches* the scripts on disk, not merely whether
+one exists. Replacing a game folder by hand leaves the old cache behind, and an
+old cache that has never heard of a class the new code references is exactly as
+broken as no cache at all — that is what made a correctly-installed copy sit
+there ignoring the controller. If it ever happens again the game says so on
+screen instead of looking dead, and `Diagnose.bat` (or `./diagnose.sh`) writes a
+`diagnostics.txt` with everything needed to work out why.
 
 ### Getting updates
 
@@ -244,6 +251,10 @@ it, so the freeze never eats your timing.
 - **A defeated fighter respawns at full health** so playtesting continues;
   stocks and match flow arrive with M4.
 - **Space both joins and jumps**, so joining on the keyboard hops once.
+- **Updating by hand is the one thing not to do.** Use the updater, or delete
+  the whole folder including `.godot` before extracting a new copy. Dropping new
+  files onto an old `.godot` is what breaks it; the launchers now catch that,
+  but the updater avoids it in the first place.
 - **Bots do not pathfind.** They walk at whoever they are fighting, and when
   something is in the way they notice they have stopped, jump, and go round.
   That clears the ramps and pillars most of the time; expect to see a CPU scuff

@@ -404,11 +404,46 @@ of pillar P2.
 
 ---
 
+## Two installs that looked like a broken game
+
+The same failure has now shipped twice, and it is worth writing down because
+neither time was it a bug in the game.
+
+Godot keeps a global class cache in `.godot`. Without an entry for a
+`class_name`, every script referencing that name fails to *compile* — which
+takes the autoloads with it. The arena is scene data, so it still renders; the
+input system is script, so it is simply gone. The result is a game that draws
+perfectly and ignores the controller, with nothing on screen to say why.
+
+- **First time:** a fresh download has no `.godot` at all. Fixed by having the
+  launchers run an import pass when the cache was missing.
+- **Second time:** a folder updated by hand kept its old `.godot`. The launchers
+  saw a cache, said "assets already prepared", and started the game anyway. The
+  guard was testing the wrong thing: a cache only means the assets are prepared
+  if it **matches the scripts on disk**. It now checks that every `class_name`
+  the project declares is actually in the cache, and re-imports if not.
+
+What made this expensive both times is that no test could see it. The suite's
+first step is an import pass, which builds the very cache whose absence is the
+bug — so the tests were always run against a project that had just been made
+correct. `tools/check_cold_start.sh` covers the missing-cache case and
+`tools/check_cache_guard.sh` the stale-cache one, both by deliberately breaking
+the thing the suite would otherwise silently repair.
+
+And because a class-cache failure means no code of ours is running to report it,
+the HUD scene now authors a warning label *visible*, which the HUD script takes
+down on every frame that `PlayerManager` exists. If the scripts do not load, the
+label is still there and the failure explains itself. That is the only kind of
+error message that survives its own cause.
+
 ## Working practices
 
 - **Headless validation every commit.** `./run_tests.sh` imports the project
   (catching script and scene parse errors) and then runs the smoke test. A commit
   that doesn't import cleanly doesn't get made.
+- **A check that the test setup would repair is not a check.** Anything about
+  installing or launching has to break the state deliberately first, because the
+  suite's own import pass fixes exactly the conditions those failures need.
 - **Nothing tall on an arena's perimeter.** The shared camera has to be able to
   sit outside the arena to frame fighters pressed against an edge. Boundaries are
   collision-only.

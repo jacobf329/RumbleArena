@@ -38,20 +38,34 @@ echo   [1/3] Godot is ready:
 echo         !GODOT_EXE!
 echo.
 
-REM A freshly downloaded copy has no .godot folder, so Godot has not yet
-REM imported the assets or built its global class cache. Launching the game
-REM without that cache leaves every class_name type unresolved: the autoloads
-REM fail to compile and NOTHING responds to input. The editor pass builds it.
-if exist "%~dp0.godot\global_script_class_cache.cfg" goto :imported
+REM The cache has to MATCH the scripts on disk, not merely exist. Replacing a
+REM game folder by hand leaves the old cache behind, and an old cache that has
+REM never heard of a class the new code references makes every script touching
+REM it fail to compile -- autoloads included, so nothing responds to input while
+REM the arena still renders. "Assets already prepared" was a lie in exactly that
+REM case, and it is the reason a correctly-installed game looked dead.
+if not exist "%~dp0tools\preflight.ps1" goto :prepare
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
+if not errorlevel 2 goto :imported
+
+:prepare
 echo   [2/3] Preparing assets. This takes a minute or two, and only
-echo         happens once.
-"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit
+echo         happens when the game files have changed.
+"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit > "%~dp0setup_log.txt" 2>&1
+
+REM An import pass that fails still exits 0 and still leaves a .godot folder
+REM behind, so "we ran it" is not evidence that it worked.
+if not exist "%~dp0tools\preflight.ps1" goto :prepared
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
+if errorlevel 2 goto :notprepared
+
+:prepared
 echo         Done.
 echo.
 goto :shortcut
 
 :imported
-echo   [2/3] Assets already prepared.
+echo   [2/3] Assets already prepared and up to date.
 echo.
 
 :shortcut
@@ -76,6 +90,22 @@ set "PLAY="
 set /p "PLAY=  Launch the game now? [Y/N] "
 if /i "!PLAY!"=="Y" start "" "%~dp0Play RumbleArena.bat"
 exit /b 0
+
+:notprepared
+echo.
+echo   Setup stopped: preparing the assets did not work.
+echo.
+echo   Launching now would give you a game where nothing responds to the
+echo   controller, so it is better to stop here. Try this:
+echo.
+echo     1. Delete the .godot folder in this game folder and run Setup again.
+echo     2. If that fails too, run Diagnose.bat and send me what it saves.
+echo.
+echo   The details are in setup_log.txt next to this file.
+echo.
+echo   Press any key to close.
+pause >nul
+exit /b 1
 
 :nogodot
 echo.
