@@ -51,18 +51,32 @@ least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
 
 ## Playing it
 
+### Windows — the short version
+
+1. **Download the project:**
+   [RumbleArena.zip](https://github.com/jacobf329/RumbleArena/archive/refs/heads/claude/godot-ninja-game-96kjrj.zip)
+2. **Right-click the .zip → Extract All.** Windows blocks scripts inside a zip
+   until it is extracted, so this step is not optional.
+3. **Double-click `Setup.bat`** in the extracted folder.
+
+Setup finds Godot, offers to download it if you do not have it, and puts a
+RumbleArena shortcut on your Desktop. After that you launch from the Desktop
+icon.
+
+### Other platforms, or doing it by hand
+
 1. **Install Godot 4.3** from [godotengine.org/download](https://godotengine.org/download).
    Take the standard version, not .NET. It is a single executable — there is no
    installer to run.
 2. **Get this branch:** `git clone` the repo and `git checkout claude/godot-ninja-game-96kjrj`,
-   or pull if you already have it.
-3. **Put a shortcut on your Desktop** — run this once:
-   - Windows → `Create Desktop Shortcut.bat`
+   or download the zip above.
+3. **Put a shortcut on your Desktop** — run once:
+   - Windows → `Setup.bat`
    - macOS / Linux → `./create_desktop_shortcut.sh`
 
-   After that, launch the game from the Desktop icon. You can also skip the
-   shortcut and double-click the launcher in the project folder directly
-   (`Play RumbleArena.bat`, `Play RumbleArena.command`, or `play.sh`).
+   You can also skip the shortcut and double-click the launcher in the project
+   folder directly (`Play RumbleArena.bat`, `Play RumbleArena.command`, or
+   `play.sh`).
 
 The launcher looks for Godot on your PATH, beside the project, in the usual
 install folders, and in Downloads. If it cannot find it, create a file called
