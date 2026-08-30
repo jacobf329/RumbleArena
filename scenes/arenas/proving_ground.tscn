@@ -1,9 +1,11 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://src/arenas/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/pillar.tscn" id="2_pillar"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/server_rack.tscn" id="3_rack"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/turret.tscn" id="4_turret"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/climbable_wall.tscn" id="5_climb"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/debris.tscn" id="6_debris"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.29, 0.3, 0.34, 1)
@@ -77,6 +79,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 3.85, -7)
 size = Vector3(6, 0.7, 5)
 material = SubResource("Mat_platform")
 
+[node name="CommsTower" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 3.5, -13)
+size = Vector3(3, 7, 3)
+material = SubResource("Mat_wall")
+
 [node name="PillarA" type="CSGBox3D" parent="Geometry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2.5, -7)
 size = Vector3(1.4, 5, 1.4)
@@ -145,6 +152,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -2)
 
 [node name="RackNorth" parent="Interactables" instance=ExtResource("3_rack")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -12)
+
+[node name="TowerFace" parent="Interactables" instance=ExtResource("5_climb")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -11.4, 3.5, -13)
+
+[node name="TowerPrize" parent="Interactables" instance=ExtResource("6_debris")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 7.4, -13)
 
 [node name="TurretWest" parent="Interactables" instance=ExtResource("4_turret")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 5.2, -3)

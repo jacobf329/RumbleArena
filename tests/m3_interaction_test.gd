@@ -41,6 +41,10 @@ func _run() -> void:
 	await _test_breaking_is_strength_gated()
 	await _test_breaking_leaves_debris_anyone_can_lift()
 
+	_section("Climbing")
+	await _test_climbing_is_agility_gated()
+	await _test_climbing_reaches_the_tower_top()
+
 	_section("Hacking")
 	await _test_hacking_is_tech_gated()
 	await _test_a_hacked_turret_shoots_the_others()
@@ -219,6 +223,64 @@ func _test_breaking_leaves_debris_anyone_can_lift() -> void:
 		"even Null can lift the debris it could not create")
 
 
+# --- Climbing ---
+
+## Double jumping already keys off AGILITY 3, so climbing is pitched at 4 to
+## give the acrobat something the other three genuinely cannot do.
+func _test_climbing_is_agility_gated() -> void:
+	var wall := _wall()
+	_check(wall.can_use(_yamabuki), "Yamabuki (AGI 5) can climb")
+	for other: Fighter in [_kurogane, _null, _jinsoku]:
+		_check(not wall.can_use(other),
+			"%s (AGI %d) cannot climb" % [
+				other.character_def.display_name, other.character_def.stat_agility])
+
+	await _stand_at_wall(_jinsoku, wall)
+	_check(_jinsoku.interaction_target == wall, "Jinsoku is in range of the wall")
+	await _press_interact(_jinsoku)
+	_check(_jinsoku.get_state_id() != FighterState.CLIMB,
+		"an AGI 3 fighter is refused the climb (%s)" % _jinsoku.get_state_id())
+	await _park(_jinsoku)
+
+
+func _test_climbing_reaches_the_tower_top() -> void:
+	var wall := _wall()
+	await _stand_at_wall(_yamabuki, wall)
+	var ground_y := _yamabuki.global_position.y
+
+	await _press_interact(_yamabuki)
+	_check(_yamabuki.get_state_id() == FighterState.CLIMB,
+		"Yamabuki gets on the wall (%s)" % _yamabuki.get_state_id())
+	if _yamabuki.get_state_id() != FighterState.CLIMB:
+		return
+
+	# Hold up until the mantle fires.
+	_source(_yamabuki).move = Vector2(0, 1)
+	var peak := ground_y
+	var mantled := false
+	for i in 400:
+		await get_tree().physics_frame
+		peak = maxf(peak, _yamabuki.global_position.y)
+		if _yamabuki.get_state_id() != FighterState.CLIMB:
+			mantled = true
+			break
+	_source(_yamabuki).move = Vector2.ZERO
+
+	_check(peak > ground_y + 4.0, "climbing gains real height (%.1f metres)" % (peak - ground_y))
+	_check(mantled, "reaching the top mantles off the wall")
+
+	await _ticks(60)
+	_check(_yamabuki.global_position.y > wall.top_y - 1.0,
+		"she ends up on top of the tower (y %.1f)" % _yamabuki.global_position.y)
+
+	# The reward for getting up there is reachable only by climbing: the tower is
+	# 7m and no double jump clears that from the floor.
+	var prize := _main.get_node_or_null("Arena/Interactables/TowerPrize") as Liftable
+	_check(prize != null and prize.global_position.y > 6.5,
+		"there is something on top worth the climb")
+	await _park(_yamabuki)
+
+
 # --- Hacking ---
 
 func _test_hacking_is_tech_gated() -> void:
@@ -273,6 +335,22 @@ func _pillar() -> Liftable:
 
 func _turret() -> HackableTurret:
 	return _main.get_node("Arena/Interactables/TurretWest") as HackableTurret
+
+
+func _wall() -> Climbable:
+	return _main.get_node("Arena/Interactables/TowerFace") as Climbable
+
+
+## Stands a fighter against the climbable face, on the ground, facing the wall.
+func _stand_at_wall(fighter: Fighter, wall: Climbable) -> void:
+	var normal := wall.outward_normal()
+	fighter.global_position = Vector3(
+		wall.global_position.x, 0.3, wall.global_position.z) + normal * 0.9
+	fighter.velocity = Vector3.ZERO
+	fighter.snap_facing(-normal)
+	_source(fighter).release_all()
+	_source(fighter).move = Vector2.ZERO
+	await _ticks(14)
 
 
 func _rack(name: String) -> Breakable:

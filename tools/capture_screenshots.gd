@@ -44,6 +44,7 @@ func _ready() -> void:
 	await _roster_shot()
 	await _combat_shot()
 	await _permission_shot()
+	await _climb_shot()
 
 	# Two fighters close together, to show the camera pushing in.
 	await _pose([Vector3(-2.5, 0.3, 11.0), Vector3(2.5, 0.3, 11.0),
@@ -116,6 +117,33 @@ func _permission_shot() -> void:
 	for tick in 20:
 		await get_tree().physics_frame
 	await _capture("m3_permission.png")
+
+
+## Yamabuki partway up the comms tower: the AGILITY gate's own verb, and the
+## only route to the one thing in the arena nobody else can reach.
+func _climb_shot() -> void:
+	var wall: Climbable = _main.get_node("Arena/Interactables/TowerFace")
+	var yamabuki := _fighters[3]
+	var normal := wall.outward_normal()
+
+	await _pose([
+		Vector3(-7.0, 0.3, -11.0), Vector3(-9.5, 0.3, -8.0), Vector3(-6.0, 0.3, -14.0),
+		Vector3(wall.global_position.x, 0.3, wall.global_position.z) + normal * 0.9,
+	])
+	yamabuki.snap_facing(-normal)
+	await get_tree().physics_frame
+
+	var source := yamabuki.slot.source as ScriptedInputSource
+	source.hold(InputFrame.Action.INTERACT, true)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	source.hold(InputFrame.Action.INTERACT, false)
+
+	source.move = Vector2(0, 1)
+	for tick in 55:
+		await get_tree().physics_frame
+	source.move = Vector2.ZERO
+	await _capture("m3_climb.png")
 
 
 func _pose(positions: Array) -> void:

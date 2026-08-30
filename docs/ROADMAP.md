@@ -158,7 +158,7 @@ builder. Naming a slice of it in an `AttackDef` is all that connects it to a mov
 
 ---
 
-## M3 — Stats and the interactive arena — **MOSTLY COMPLETE**
+## M3 — Stats and the interactive arena — **COMPLETE**
 **Risk under test:** does stat-gated interaction read as cool rather than arbitrary?
 
 - [x] `CharacterDef` resource with the six stats
@@ -167,7 +167,7 @@ builder. Naming a slice of it in an `AttackDef` is all that connects it to a mov
 - [x] Breakable, spawning debris anyone can then throw
 - [x] Hackable turrets that fire on everyone but the hacker
 - [x] Interaction probe + contextual prompt, **including denied prompts**
-- [ ] Climbable: mantle, wall-climb — still outstanding
+- [x] Climbable walls with a mantle at the top
 
 **Playable result:** the arena is a weapon, and which weapon depends on who you
 picked.
@@ -178,15 +178,16 @@ Every interactable is gated to exactly one of the four staged characters, or to
 everyone. That is the whole teaching design: you learn the system by being
 refused, and learn the roster by seeing what you are refused.
 
-| | Pillar (STR 4) | Rack (STR 2) | Turret (TECH 3) | Debris (STR 1) |
-|---|---|---|---|---|
-| **Kurogane** STR 5 / TECH 1 | ✓ | ✓ | — | ✓ |
-| **Null** STR 1 / TECH 5 | — | — | ✓ | ✓ |
-| **Jinsoku** STR 2 | — | ✓ | — | ✓ |
-| **Yamabuki** STR 2 | — | ✓ | — | ✓ |
+| | Pillar (STR 4) | Rack (STR 2) | Turret (TECH 3) | Tower (AGI 4) | Debris (STR 1) |
+|---|---|---|---|---|---|
+| **Kurogane** STR 5 / AGI 2 / TECH 1 | ✓ | ✓ | — | — | ✓ |
+| **Null** STR 1 / AGI 3 / TECH 5 | — | — | ✓ | — | ✓ |
+| **Jinsoku** STR 2 / AGI 3 | — | ✓ | — | — | ✓ |
+| **Yamabuki** STR 2 / AGI 5 | — | ✓ | — | ✓ | ✓ |
 
-Null is the only character who can hack, and the only one who can neither lift a
-pillar nor break a rack. A STRENGTH 1 fighter who loses every straight exchange
+Each of the three specialists owns exactly one verb nobody else has: Kurogane
+lifts, Null hacks, Yamabuki climbs. Null is also the only one who can neither
+lift a pillar nor break a rack. A STRENGTH 1 fighter who loses every straight exchange
 can still turn the room's turrets on everyone else, which is what makes the
 stat spread worth playing rather than merely worth reading.
 
@@ -206,6 +207,11 @@ stat spread worth playing rather than merely worth reading.
 - **Turrets are hacked at range.** They hang from the ceiling, and requiring the
   hacker to climb up and touch one would be bad fiction and — as the tests
   caught — physically unreachable for the one character meant to use them.
+- **Climbing is pitched at AGILITY 4, not 3.** Double jumping already keys off
+  AGILITY 3, so gating the climb there would have given three of the four
+  characters a taller version of what they already had. At 4 it belongs to the
+  acrobat alone, and the comms tower is 7m — beyond any double jump from the
+  floor — so the thing on top of it is reachable one way only.
 - **Carrying costs speed and your fists.** A pillar is a decision, not a free
   upgrade: you move at 62% speed and cannot attack until you throw it.
 - **Dying returns what you were holding.** Otherwise a heavy prop could be
@@ -213,6 +219,18 @@ stat spread worth playing rather than merely worth reading.
 
 ### What M3 turned up
 
+- **Climbing fought the body solver.** A tick of climbing covers less ground
+  than `move_and_slide`'s floor-snap distance, so snapping dragged the fighter
+  back down every frame and the climb went nowhere. Climbing sets the transform
+  directly, so it now skips the solver outright.
+- **The press that starts a climb also ended it.** The same INTERACT edge that
+  put a fighter on the wall was still just-pressed when the climb state read it
+  as "let go", so the fighter bounced straight off. The state ignores that input
+  on its entry tick.
+- **A mantle has to place you, not launch you.** Popping the fighter up and
+  forward with velocity lost its forward momentum to air drag within three ticks
+  of a neutral stick, dropping them back down the wall. The mantle now puts them
+  on the surface.
 - **A check that passed for the wrong reason.** "Kurogane cannot hack the
   turret" passed while the turret was unreachable by anyone — nothing on the
   floor could target something on the ceiling. It now asserts he is in range

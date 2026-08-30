@@ -17,6 +17,7 @@ const ATTACK := &"attack"
 const HITSTUN := &"hitstun"
 const KNOCKDOWN := &"knockdown"
 const BLOCK := &"block"
+const CLIMB := &"climb"
 
 const STAY := &""
 

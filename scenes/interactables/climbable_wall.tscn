@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/interactables/climbable.gd" id="1_climbable"]
+
+[sub_resource type="BoxShape3D" id="Shape_wall"]
+size = Vector3(3, 7, 0.8)
+
+[node name="ClimbableWall" type="Area3D"]
+script = ExtResource("1_climbable")
+display_name = "Tower Face"
+top_y = 7.0
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_wall")

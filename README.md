@@ -9,13 +9,13 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-**M3 mostly complete** — four players join with gamepads or keyboard and fight
-in a grey-box arena under a single shared camera: punch-punch-kick chains, heavy
-and launcher confirms, blocking, dodging, juggles, knockdowns and wall splats,
-with timing-based rhythm bonuses. The arena is stat-gated: Kurogane rips out
-concrete pillars and throws them, Null hacks the ceiling turrets, and each is
-refused what the other can do. Climbing is the one M3 item still outstanding.
-See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**M3 complete** — four players join with gamepads or keyboard and fight in a
+grey-box arena under a single shared camera: punch-punch-kick chains, heavy and
+launcher confirms, blocking, dodging, juggles, knockdowns and wall splats, with
+timing-based rhythm bonuses. The arena is stat-gated: Kurogane rips out concrete
+pillars and throws them, Null hacks the ceiling turrets, Yamabuki climbs the
+comms tower, and each is refused what the others can do. Match flow and stocks
+come next in M4. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 The same pillar, offered to the fighter who qualifies and refused — with the
 requirement named — to the one who does not:
@@ -126,9 +126,15 @@ you would need. Being refused is how you learn the roster.
 | | Gate | Who |
 |---|---|---|
 | Concrete pillar — lift and throw | STRENGTH 4 | Kurogane only |
-| Server rack — break for debris | STRENGTH 2 | everyone but Null |
+| Comms tower — climb | AGILITY 4 | Yamabuki only |
 | Ceiling turret — hack | TECH 3 | Null only |
+| Server rack — break for debris | STRENGTH 2 | everyone but Null |
 | Debris — lift and throw | STRENGTH 1 | everyone |
+
+Each specialist owns exactly one verb nobody else has. The tower is 7 metres —
+past any double jump — so what sits on top of it is reachable one way only.
+
+![Climbing the comms tower](docs/images/m3-climb.png)
 
 Carrying something costs 62% of your speed and the use of your fists until you
 throw it. A hacked turret fires on everyone except the hacker.

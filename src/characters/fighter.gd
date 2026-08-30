@@ -63,6 +63,8 @@ var pending_hitstun: int = 0
 ## qualify, because a refused prompt is how the stat system teaches itself.
 var carried: Liftable = null
 var interaction_target: Interactable = null
+## The wall this fighter is currently on, if any.
+var climbing: Climbable = null
 
 var _states: Dictionary = {}
 var _state: FighterState
@@ -142,6 +144,7 @@ func _build_states() -> void:
 	var states: Array[FighterState] = [
 		IdleState.new(), RunState.new(), AirState.new(), DashState.new(),
 		AttackState.new(), HitstunState.new(), KnockdownState.new(), BlockState.new(),
+		ClimbState.new(),
 	]
 	for state in states:
 		state.setup(self)
@@ -190,7 +193,11 @@ func _physics_process(delta: float) -> void:
 		_transition_to(next)
 
 	_speed_before_move = velocity.length()
-	move_and_slide()
+	# Climbing sets the transform directly, so it must not also run the body
+	# solver: floor snapping would drag the fighter back down every tick, since
+	# a tick's worth of climbing is shorter than the snap distance.
+	if _state_id != FighterState.CLIMB:
+		move_and_slide()
 	_update_visual()
 
 	if global_position.y < FALL_OUT_HEIGHT:
@@ -217,10 +224,16 @@ func _update_interaction() -> void:
 		return
 
 	if interaction_target != null and interaction_target.can_use(self):
-		if interaction_target.use(self):
-			var liftable := interaction_target as Liftable
-			if liftable != null:
-				carried = liftable
+		if not interaction_target.use(self):
+			return
+		var liftable := interaction_target as Liftable
+		if liftable != null:
+			carried = liftable
+			return
+		var wall := interaction_target as Climbable
+		if wall != null:
+			climbing = wall
+			_transition_to(FighterState.CLIMB)
 
 
 ## Nearest interactable in front of the fighter. Objects the fighter cannot use
@@ -282,6 +295,11 @@ func _update_visual() -> void:
 			pass
 		FighterState.HITSTUN, FighterState.KNOCKDOWN:
 			_visual.hold()
+		FighterState.CLIMB:
+			_visual.release_attack()
+			# No climb clip yet, so the walk cycle stands in, paced by how fast
+			# the fighter is actually moving up the wall.
+			_visual.play_locomotion(velocity.length() + 1.2, false)
 		_:
 			_visual.release_attack()
 			_visual.play_locomotion(
@@ -701,6 +719,8 @@ func take_hit(result: HitResult) -> void:
 		velocity.z = result.knockback.z
 		_blockstun = result.hitstun_ticks
 	else:
+		if _state_id == FighterState.CLIMB:
+			climbing = null
 		velocity = result.knockback
 		pending_hitstun = result.hitstun_ticks
 		_knockdown_pending = result.knockback.length() >= CombatMath.KNOCKDOWN_SPEED
@@ -863,6 +883,7 @@ func respawn() -> void:
 	if carried != null:
 		carried.release()
 		carried = null
+	climbing = null
 	global_position = spawn_point
 	velocity = Vector3.ZERO
 	health = max_health
