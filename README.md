@@ -37,6 +37,12 @@ The camera frames everyone and pushes in when the fight closes up:
 
 ![The camera pushing in](docs/images/m1-camera-close.png)
 
+Four bots, nobody holding a controller — one attacking, two guarding, one in
+hitstun, and CPU2 already down a stock. They play through the same `InputFrame`
+a pad fills, so none of that is a special case:
+
+![Four bots fighting each other](docs/images/m5-bot-brawl.png)
+
 ## Design
 
 - **[`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)** — pillars, stat system,
@@ -135,6 +141,19 @@ once or twice a match, sits somewhere deliberately awkward.
 Landing and taking hits **rumbles the pad**, scaled by damage; on-beat hits buzz
 harder and longer.
 
+### Playing on your own
+
+Press **BACK** on a pad (or **F2**) to add a CPU opponent. Press it again to add
+another, up to a full arena; once all four seats are taken, BACK clears the
+bench so you can start over. On the keyboard, **F3** removes one at a time.
+
+Bots are ready the moment they sit down, so a bench never holds up the bell —
+one player plus BACK three times is a four-way brawl. They come in at different
+skill levels rather than three copies of the same opponent, and they play
+through the same buttons you do: a bot presses grab at a guard and eats a combo
+in hitstun exactly like a person, because the AI fills the same `InputFrame`
+your controller does and has no other way to touch the game.
+
 F5 returns everyone to their spawn.
 
 Light chains **punch, punch, kick** — and the kick throws a **fireball** if the
@@ -202,6 +221,12 @@ it, so the freeze never eats your timing.
 - **A defeated fighter respawns at full health** so playtesting continues;
   stocks and match flow arrive with M4.
 - **Space both joins and jumps**, so joining on the keyboard hops once.
+- **Bots do not pathfind.** They walk at whoever they are fighting, and when
+  something is in the way they notice they have stopped, jump, and go round.
+  That clears the ramps and pillars most of the time; expect to see a CPU scuff
+  along a platform edge for a second before it works out the detour.
+- **Bots ignore the arena.** They do not climb, throw crates, or hack turrets
+  yet, so the interactables are still a human advantage.
 - `rigify_clip.glb` imports as 0.07s despite being 3.03s in the source, so it is
   unused. Worth re-exporting.
 
@@ -215,13 +240,25 @@ GODOT=/path/to/godot ./run_tests.sh          # normal run
 GODOT=/path/to/godot ./run_tests.sh --cold   # also verify a fresh download boots
 ```
 
+There is also a measuring instrument rather than a test:
+
+```sh
+godot --headless --path . res://tests/bot_brawl_probe.tscn -- --seconds=60
+```
+
+Four bots, nobody watching, one minute. It asserts nothing; it prints how far
+apart the fight spreads, how much of the match the shared camera spends chasing
+it, and how long bots spend wedged on scenery. That is what the AI's targeting
+and stall recovery were tuned against.
+
 `--cold` deletes the asset cache and follows exactly what the launcher does on a
 fresh download. The normal run cannot catch that class of failure, because its
 first step is an import pass — which builds the very cache whose absence is the
 bug.
 
 The normal run imports the project to surface script and scene parse errors,
-then runs the suites: 36 movement, input and camera checks, and 51 combat checks. Every test
+then runs the suites: 77 movement/input/camera, 106 combat, 50 interaction, 40
+match-flow and 49 bot checks — 322 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

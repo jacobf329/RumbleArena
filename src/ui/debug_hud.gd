@@ -43,6 +43,16 @@ func add_meter(fighter: Fighter) -> void:
 	meter.bind(fighter, _match)
 
 
+## The mirror of add_meter, for a bot seat being emptied.
+func remove_meter(fighter: Fighter) -> void:
+	for child in _meters.get_children():
+		var meter := child as PlayerMeter
+		if meter != null and meter.get_fighter() == fighter:
+			_meters.remove_child(meter)
+			meter.queue_free()
+			return
+
+
 func _on_phase_changed(phase: MatchManager.Phase) -> void:
 	if phase == MatchManager.Phase.FIGHTING:
 		_flash = 1.2
@@ -73,7 +83,7 @@ func _join_text(free_seats: int) -> String:
 			and PlayerManager.get_active_count() < MatchManager.MIN_PLAYERS:
 		return "%s   Two players needed to start." % JOIN_HINT
 	if free_seats <= 0:
-		return "All four seats filled."
+		return "All four seats filled.   [BACK] or [F3] to free up a CPU seat."
 	return "%s   (%d seat%s open)" % [JOIN_HINT, free_seats, "" if free_seats == 1 else "s"]
 
 
@@ -137,4 +147,5 @@ func _controls_text() -> String:
 	return "Gamepad: stick/d-pad move | A jump | LT dodge | X light | Y heavy | RB launcher | B grab | LB block | RT signature | R3 ultimate\n" \
 		+ "Keyboard: WASD move | SPACE jump | SHIFT dodge | J light | K heavy | L launcher | U grab | CTRL block | Q signature | R ultimate\n" \
 		+ "Before the bell: [LB]/[RB] pick your ninja, [A] to lock in.\n" \
+		+ "CPU opponents: [BACK] on a pad (clears the bench once the arena is full), or [F2] add / [F3] remove.  [F5] resets positions.\n" \
 		+ "Light three times = punch, punch, KICK -- the kick throws a fireball if the blue meter can pay for it. Grab beats block."

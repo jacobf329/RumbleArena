@@ -351,11 +351,56 @@ Changes made off the back of actually playing it:
 ## M5 — Roster scale-out
 Only after M4 is judged fun.
 
+- [x] AI bots to fill empty slots
 - [ ] Remaining six ninjas as data + power scripts
 - [ ] 2–3 more arenas with distinct interactable themes
-- [ ] AI bots to fill empty slots
 - [ ] Balance pass across the matchup matrix
 - [ ] Audio, real models, VFX polish
+
+### Bots
+
+Because a bot is just another `InputSource`, the AI cost about 180 lines and
+gets no special privileges: it fills an `InputFrame` and the fighter consumes it
+without knowing the difference. It cannot reach past a rule it does not like,
+and anything a bot does, a player can do with the same buttons. This is the
+whole return on the M1 decision never to let fighters poll `Input` — a decision
+that looked like pointless ceremony at the time.
+
+A bot picks a target, closes, circles at range, guards when it sees a wind-up,
+**grabs a guard rather than beating on it**, and spends its meter on its
+signature. Skill is one float: reaction time, how often it guards, and how close
+its combo timing sits to the cancel window. A bench comes in at different skill
+levels rather than three copies of the same opponent.
+
+Bots are ready the moment they sit down and stay ready through a rematch, since
+a bot has no way to press the lock-in button and a seat that never readies would
+stall every countdown forever.
+
+### What this turned up
+
+Four bots on one shared camera is exactly the question the camera was always
+going to live or die on, and one minute of them fighting each other answered it
+better than an hour of asserting things:
+
+- **Nearest-target picking splits four bots into two duels in opposite corners.**
+  Obviously right, and the one thing a single shared camera cannot frame. Bots
+  now score targets by distance *plus* how far that target is from the centre of
+  everyone else, so they gravitate to the scrum the way a player drawn to the
+  action does. Time spent with the fight spread over 20 m fell from as much as
+  37% of a match to 5–10%.
+- **Bots walked into the scenery and stayed there.** With no navigation mesh,
+  "walk at your target" works until a ramp or a pillar is in the way — two bots
+  spent thirty seconds pushing into the same wall. They now notice that they are
+  asking to move and not moving, jump, and commit to going around for a moment.
+  Wedged time dropped by roughly 5x.
+- **Neither of those was visible from the test suite.** Every assertion passed
+  the whole time. They came out of a probe that asserts nothing and just
+  measures — `tests/bot_brawl_probe.tscn` — which is now the tool for the
+  balance pass too.
+
+Still open: bots ignore the interactables entirely. They do not climb, throw or
+hack, which quietly makes the environment a human-only advantage — the opposite
+of pillar P2.
 
 ---
 

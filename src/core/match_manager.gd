@@ -58,6 +58,26 @@ func register(fighter: Fighter) -> void:
 		_evaluate_start()
 
 
+## A seat that left mid-match (a bot being removed) stops counting toward the
+## last-ninja-standing check, otherwise pulling a bot out would leave a ghost
+## that the match waits on forever.
+func unregister(fighter: Fighter) -> void:
+	if fighter.slot == null:
+		return
+	var index := fighter.slot.index
+	if not _fighters.has(index):
+		return
+	_fighters.erase(index)
+	_stocks.erase(index)
+
+	if phase == Phase.WAITING or phase == Phase.COUNTDOWN:
+		_evaluate_start()
+	elif phase == Phase.FIGHTING:
+		var living := get_living_slots()
+		if living.size() <= 1:
+			_end_match(living[0] if living.size() == 1 else null)
+
+
 func get_stocks(index: int) -> int:
 	return _stocks.get(index, 0)
 
@@ -186,7 +206,9 @@ func _reset_to_waiting() -> void:
 	winner = null
 	for index: int in _fighters:
 		var fighter := _fighters[index] as Fighter
-		if fighter.slot != null:
+		# Bots stay ready. Un-readying one would mean nobody could ever ready it
+		# again and the next match would never start.
+		if fighter.slot != null and not fighter.slot.is_bot():
 			fighter.slot.is_ready = false
 	_evaluate_start()
 

@@ -39,6 +39,10 @@ func bind(fighter: Fighter, manager: MatchManager = null) -> void:
 	_refresh_ranges()
 
 
+func get_fighter() -> Fighter:
+	return _fighter
+
+
 func _process(_delta: float) -> void:
 	if not is_instance_valid(_fighter):
 		return

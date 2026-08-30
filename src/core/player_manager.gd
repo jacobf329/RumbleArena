@@ -18,7 +18,12 @@ const SLOT_COLORS: Array[Color] = [
 	Color("e0b53a"),  # amber
 ]
 
+## Skill handed to each bot as they are added, so a bench of three is a ladder
+## rather than three copies of the same opponent.
+const BOT_SKILL_LADDER: Array[float] = [0.55, 0.35, 0.75, 0.45]
+
 signal player_joined(slot: PlayerSlot)
+signal player_left(slot: PlayerSlot)
 signal player_device_lost(slot: PlayerSlot)
 signal player_device_restored(slot: PlayerSlot)
 
@@ -76,6 +81,58 @@ func _assign(source: InputSource) -> void:
 		return
 	slot.source = source
 	player_joined.emit(slot)
+
+
+## Seats a bot. A bot is an InputSource like any other, so nothing downstream --
+## the fighter, the camera, the match, the HUD -- has a branch for it: it joins
+## through the same path a human does and plays through the same buttons.
+func add_bot(skill := -1.0) -> PlayerSlot:
+	var slot := get_free_slot()
+	if slot == null:
+		return null
+	var chosen := skill if skill >= 0.0 else BOT_SKILL_LADDER[get_bot_count() % BOT_SKILL_LADDER.size()]
+	var bot := BotInputSource.new(slot.index, chosen)
+	slot.source = bot
+	# Ready on arrival: a bot has no way to press the lock-in button, and a seat
+	# that never readies would stall every countdown.
+	slot.is_ready = true
+	player_joined.emit(slot)
+	return slot
+
+
+## Frees the most recently seated bot. Humans are never removed this way --
+## somebody who sat down keeps their seat until they unplug.
+func remove_bot() -> PlayerSlot:
+	for i in range(slots.size() - 1, -1, -1):
+		var slot := slots[i]
+		if slot.is_bot():
+			slot.source = null
+			slot.is_ready = false
+			_was_awaiting[slot.index] = false
+			player_left.emit(slot)
+			return slot
+	return null
+
+
+## Empties the whole bench at once. The pad has exactly one spare button, so on
+## a controller adding cycles round to clearing rather than needing a second.
+func clear_bots() -> int:
+	var removed := 0
+	while remove_bot() != null:
+		removed += 1
+	return removed
+
+
+func get_bot_count() -> int:
+	return slots.filter(func(slot: PlayerSlot) -> bool: return slot.is_bot()).size()
+
+
+func get_bot_sources() -> Array[BotInputSource]:
+	var bots: Array[BotInputSource] = []
+	for slot in slots:
+		if slot.is_bot():
+			bots.append(slot.source as BotInputSource)
+	return bots
 
 
 func _is_device_taken(device_id: int) -> bool:

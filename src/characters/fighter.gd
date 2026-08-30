@@ -384,6 +384,24 @@ func get_move_direction() -> Vector3:
 	return (right.normalized() * intent.x + forward.normalized() * intent.y).normalized()
 
 
+## Converts a world direction into the stick vector that would produce it.
+## The inverse of get_move_direction, so a bot steers in world space and the
+## camera-relative conversion stays in one place.
+func to_input_space(world_direction: Vector3) -> Vector2:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return Vector2(world_direction.x, -world_direction.z).normalized()
+
+	var basis := camera.global_transform.basis
+	var forward := Vector3(-basis.z.x, 0.0, -basis.z.z)
+	var right := Vector3(basis.x.x, 0.0, basis.x.z)
+	if forward.length_squared() < 0.0001:
+		return Vector2.ZERO
+
+	var flat := Vector3(world_direction.x, 0.0, world_direction.z).normalized()
+	return Vector2(flat.dot(right.normalized()), flat.dot(forward.normalized())).limit_length(1.0)
+
+
 ## Analog tilt, so a light push walks and a full push runs.
 func get_move_strength() -> float:
 	return minf(get_input().move.length(), 1.0)
@@ -1095,6 +1113,23 @@ func eliminate() -> void:
 	set_physics_process(false)
 	if slot != null and slot.source != null:
 		slot.source.stop_rumble()
+
+
+## Leaving the match entirely -- a bot being removed from the bench. Unlike
+## eliminate(), this fighter is about to be freed, so anything it is holding on
+## to has to be handed back first: a crate it is carrying, and, by way of the
+## current state's exit(), anyone it has in a grab. Otherwise removing a bot
+## mid-throw would leave its victim frozen in hitstun with nobody to release it.
+func vacate() -> void:
+	if carried != null:
+		carried.release()
+		carried = null
+	climbing = null
+	_state.exit()
+	set_physics_process(false)
+	if slot != null and slot.source != null:
+		slot.source.stop_rumble()
+	remove_from_group(&"fighters")
 
 
 ## Brought back for a rematch.

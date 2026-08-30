@@ -27,6 +27,7 @@ func _ready() -> void:
 	_select.character_changed.connect(_on_character_changed)
 
 	PlayerManager.player_joined.connect(_on_player_joined)
+	PlayerManager.player_left.connect(_on_player_left)
 	PlayerManager.join_enabled = true
 
 
@@ -39,11 +40,31 @@ func _on_player_joined(slot: PlayerSlot) -> void:
 	_fighter_root.add_child(fighter)
 
 	slot.fighter = fighter
+	# The one line a bot seat needs beyond a human one: the AI has to be able to
+	# see the body it is driving, because unlike a thumb it has no eyes.
+	var bot := slot.source as BotInputSource
+	if bot != null:
+		bot.fighter = fighter
+
 	_fighters.append(fighter)
 	_camera.add_target(fighter)
 	_match.register(fighter)
 	_hud.fighters = _fighters
 	_hud.add_meter(fighter)
+
+
+func _on_player_left(slot: PlayerSlot) -> void:
+	var fighter := slot.fighter as Fighter
+	slot.fighter = null
+	if not is_instance_valid(fighter):
+		return
+	_fighters.erase(fighter)
+	_camera.remove_target(fighter)
+	_match.unregister(fighter)
+	_hud.remove_meter(fighter)
+	_hud.fighters = _fighters
+	fighter.vacate()
+	fighter.queue_free()
 
 
 func _on_character_changed(slot: PlayerSlot) -> void:
@@ -65,10 +86,39 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if key == null or not key.pressed or key.echo:
 		return
 	match key.physical_keycode:
+		KEY_F2:
+			_add_bot()
+		KEY_F3:
+			PlayerManager.remove_bot()
 		KEY_F5:
 			_reset_positions()
 		KEY_F10:
 			get_tree().quit()
+
+
+## The pad is the primary interface, so the bench has to be reachable without
+## reaching for a keyboard. BACK is the only face button character select has
+## not already claimed, so it does both jobs: it adds a CPU, and once the arena
+## is full it clears the bench, which makes 0 -> 1 -> 2 -> 3 -> 0 a round trip
+## on one button rather than a dead end.
+##
+## (BACK is also the natural home for a pause menu. When there is one, this
+## moves; START is already the join button, so it cannot go there.)
+func _unhandled_input(event: InputEvent) -> void:
+	var button := event as InputEventJoypadButton
+	if button == null or not button.pressed or button.button_index != JOY_BUTTON_BACK:
+		return
+	if PlayerManager.get_free_slot() == null:
+		PlayerManager.clear_bots()
+	else:
+		_add_bot()
+
+
+## Bots only join between matches. Dropping one in mid-fight would hand it a
+## full set of stocks against players who have already spent theirs.
+func _add_bot() -> void:
+	if _match.phase == MatchManager.Phase.WAITING or _match.phase == MatchManager.Phase.COUNTDOWN:
+		PlayerManager.add_bot()
 
 
 ## Puts everyone back on their spawn marker. Useful when a playtest ends with
