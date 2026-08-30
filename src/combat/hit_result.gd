@@ -9,4 +9,6 @@ var knockback: Vector3
 var hitstun_ticks: int
 var hitstop_ticks: int
 var blocked: bool = false
+## True when the attacker launched this strike inside the rhythm window.
+var on_beat: bool = false
 var position: Vector3

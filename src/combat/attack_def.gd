@@ -39,6 +39,22 @@ extends Resource
 ## Offset from the fighter's feet, in the fighter's own frame (-Z is forward).
 @export var hitbox_offset: Vector3 = Vector3(0, 1.0, -1.0)
 
+@export_group("Animation")
+## Clip in the shared ninja library. Frame data owns gameplay timing; the clip
+## is scaled to fit it, never the other way round.
+@export var animation: StringName = &""
+## Slice of the clip this move uses, and the moment within it that contact
+## happens. Playback is scaled so `animation_impact` lands on the active frames.
+@export var animation_start: float = 0.0
+@export var animation_impact: float = 0.0
+@export var animation_end: float = 0.0
+
+@export_group("Rhythm")
+## Half-width, in ticks, of the sweet spot around the moment this move becomes
+## cancellable. Input landing inside it is "on beat": the follow-up comes out
+## faster and hits harder. Mashing early still combos, it just earns nothing.
+@export var rhythm_window_ticks: int = 7
+
 @export_group("Cancelling")
 ## Tick, measured from the end of the active window, at which this move may be
 ## cancelled into its follow-up.
@@ -50,6 +66,20 @@ extends Resource
 
 func total_ticks() -> int:
 	return ticks_startup + ticks_active + ticks_recovery
+
+
+## Seconds of clip between the slice start and the moment of contact.
+func animation_wind_up() -> float:
+	return maxf(animation_impact - animation_start, 0.0)
+
+
+## Seconds of clip after contact.
+func animation_follow_through() -> float:
+	return maxf(animation_end - animation_impact, 0.0)
+
+
+func has_animation() -> bool:
+	return animation != &"" and animation_end > animation_start
 
 
 func active_start() -> int:

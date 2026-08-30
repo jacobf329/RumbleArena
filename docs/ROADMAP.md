@@ -95,6 +95,69 @@ than as anything a reader would spot:
 
 ---
 
+## M2.5 — Character model, animation and rhythm — **COMPLETE**
+**Risk under test:** does one shared model read as four distinct players, and
+does timing a combo feel better than mashing it?
+
+- [x] Shared ninja model with ten animation clips
+- [x] Per-player recolour by hue rotation, targeting the crimson only
+- [x] Locomotion driven by actual speed; attack clips aligned to frame data
+- [x] Rhythm windows: timing a cancel earns flow, speed and damage
+- [x] Punch, punch, kick as the basic chain
+
+### Asset pipeline
+
+Every clip the model tool exports carries its own copy of the character mesh and
+a 2048x2048 texture -- 6.3 MB per animation, of which only the animation is
+wanted. `tools/strip_animation_glb.py` rewrites a clip to keep the node
+hierarchy, the skin and the animation, substituting a single degenerate skinned
+triangle for the mesh so Godot still builds the same `Skeleton3D` and still
+produces bone tracks rather than node-path tracks. Ten clips went from 64 MB to
+630 KB, and each new animation now costs tens of kilobytes instead of six
+megabytes.
+
+`tools/build_animation_library.gd` then folds every clip into one
+`AnimationLibrary`, flattening horizontal root motion: the fighter's position is
+owned by the physics body and the knockback system, and an animation that also
+slides the character would fight it. Vertical motion is kept, because that is the
+crouch and the leap.
+
+**Adding a clip:** drop the `.glb` in, run the stripper, re-run the library
+builder. Naming a slice of it in an `AttackDef` is all that connects it to a move.
+
+### Decisions worth remembering
+
+- **One texture, recoloured by saturation rather than hue.** A flat hue rotation
+  would recolour the skin along with the armour and give every player but one a
+  green face. Measuring the atlas showed the crimson at hue 0.0 / saturation
+  0.68, skin at 0.07 / 0.35 and the dark armour below 0.2 -- so *saturation* is
+  what separates them. The shader rotates only pixels above the threshold.
+- **Frame data wins; the animation is scaled to fit.** Each `AttackDef` names a
+  clip plus the moment of contact within it, and playback is scaled so that
+  moment lands on the active frames -- with the wind-up and the follow-through
+  scaled separately, because frame data and animation rarely divide a move the
+  same way. Contact points were measured, not guessed: `tools/analyse_impacts.gd`
+  samples the pose every frame and reports peaks in how far the hands and feet
+  reach from the hips, which is where a punch connects.
+- **Rhythm rewards, never punishes.** Mashing still combos; it just earns
+  nothing. Timing the cancel to the moment a move becomes cancellable scores
+  "on beat", which grants faster startup, more damage, and a flow streak that
+  compounds while the chain stays clean. Punishing a masher would make the game
+  worse for the player least equipped to handle it.
+- **Hitstop does not count against your timing.** The input buffer is frozen
+  during hitstop, so the freeze never eats the window -- which matters, because
+  hitstop is exactly when the next press happens.
+
+### What this turned up
+
+- **The model faces +Z.** Godot's forward is -Z, so it needed a 180-degree flip.
+  Determined from the skeleton rather than by eye: the toe bone extends +Z from
+  the foot.
+- **`rigify_clip.glb` imports as 0.07s** despite being 3.03s in the source file.
+  It is excluded from the moveset; worth re-exporting.
+
+---
+
 ## M3 — Stats and the interactive arena
 **Risk under test:** does stat-gated interaction read as cool rather than arbitrary?
 

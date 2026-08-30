@@ -9,11 +9,17 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-**M2 complete** — four players can join with gamepads or keyboard, move around a
-grey-box arena under a single shared camera, and fight: light chains, heavy and
-launcher confirms, blocking, dodging, juggles, knockdowns and wall splats.
+**M2 complete, plus the character model and rhythm combos** — four players join
+with gamepads or keyboard and fight in a grey-box arena under a single shared
+camera: punch-punch-kick chains, heavy and launcher confirms, blocking, dodging,
+juggles, knockdowns and wall splats, with timing-based rhythm bonuses.
 Stat-gated environmental interaction starts at M3. See
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+One mesh, one texture, four players — the shader rotates the hue of the crimson
+only, so skin and armour stay put:
+
+![The four players](docs/images/roster.png)
 
 ![Kurogane landing a heavy](docs/images/m2-impact.png)
 
@@ -58,10 +64,16 @@ Yamabuki jumps highest.
 
 F5 returns everyone to their spawn.
 
-Light chains into itself three times; heavy and launcher are confirms that only
+Light chains **punch, punch, kick**; heavy and launcher are confirms that only
 cancel out of a move that actually connected, so whiffing a heavy costs you the
 full recovery. Block covers the front only. Dodge has invulnerability frames and
 costs stamina. Knocking someone into a wall splats them and hands you a juggle.
+
+**Rhythm.** Mashing combos fine — it just earns nothing. Time each follow-up to
+the moment the previous move becomes cancellable and it scores *on beat*: faster
+startup, more damage, and a flow streak that compounds while the chain stays
+clean. The window is about a quarter of a second, and hitstop is frozen out of
+it, so the freeze never eats your timing.
 
 A defeated fighter currently respawns at full health so playtesting continues —
 stocks and match flow arrive with M4.
@@ -86,6 +98,7 @@ headlessly with no hardware.
 | `src/core/` | Match flow, game state, player management |
 | `src/input/` | `InputSource` / `InputFrame` abstraction (keyboard + gamepad) |
 | `src/characters/` | `CharacterDef` resources, fighter, state machine, roster |
+| `assets/characters/` | Ninja model, stripped animation clips, hue shader |
 | `src/combat/` | Frame data, movesets, hit resolution, damage formulas |
 | `src/powers/` | Power base class and per-character powers |
 | `src/interactables/` | Liftable, Climbable, Hackable, Breakable, Hazard |
@@ -93,3 +106,4 @@ headlessly with no hardware.
 | `src/ui/` | HUD, character select, contextual prompts |
 | `src/arenas/` | Arena scenes |
 | `tests/` | Headless validation scenes |
+| `tools/` | Asset pipeline: GLB stripper, animation library builder, impact analysis |

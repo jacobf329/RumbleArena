@@ -76,6 +76,12 @@ var _light_chain_index: int = 0
 ## fresh. Purely observational, but it is the only unambiguous way to tell a
 ## real cancel from simply waiting out the recovery.
 var cancel_count: int = 0
+## Consecutive on-beat cancels. Rhythm is a streak, not a per-hit coin flip:
+## the reward grows while the chain stays clean and resets the moment it does not.
+var flow: int = 0
+## Damage and knockback multiplier for the attack currently running.
+var strike_scale: float = 1.0
+var _pending_on_beat := false
 ## Attacks entered, however they started. Observational.
 var attacks_started: int = 0
 var _attack_pressed_this_tick := false
@@ -90,12 +96,9 @@ var _speed_before_move := 0.0
 
 var _hitbox_shape := BoxShape3D.new()
 var _hitbox_query := PhysicsShapeQueryParameters3D.new()
-var _body_material: StandardMaterial3D
 var _base_color := Color.WHITE
 
-@onready var _visual: Node3D = $Visual
-@onready var _body_mesh: MeshInstance3D = $Visual/Body
-@onready var _accent_mesh: MeshInstance3D = $Visual/Accent
+@onready var _visual: FighterVisual = $Visual
 @onready var _nameplate: Label3D = $Nameplate
 
 
@@ -134,27 +137,18 @@ func _build_states() -> void:
 	_state.enter(FighterState.IDLE)
 
 
-## Player identity beats character identity: the body wears the slot colour so
-## "which one am I" is answered by silhouette, and the character shows up as an
-## accent stripe. Pillar P3.
+## Every fighter shares one mesh and one texture; the slot colour is applied by
+## rotating the hue of the texture's saturated crimson only, so four players
+## read apart at a glance. Pillar P3.
 func _apply_presentation() -> void:
 	_base_color = slot.color if slot != null else Color.WHITE
-	_body_material = _flat_material(_base_color)
-	_body_mesh.material_override = _body_material
-	_accent_mesh.material_override = _flat_material(character_def.body_color)
+	_visual.set_player_colour(_base_color)
 
 	_nameplate.text = "%s  %s" % [
 		slot.get_label() if slot != null else "--",
 		character_def.display_name,
 	]
 	_nameplate.modulate = _base_color
-
-
-func _flat_material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.65
-	return material
 
 
 func _physics_process(delta: float) -> void:
@@ -183,9 +177,27 @@ func _physics_process(delta: float) -> void:
 
 	_speed_before_move = velocity.length()
 	move_and_slide()
+	_update_visual()
 
 	if global_position.y < FALL_OUT_HEIGHT:
 		respawn()
+
+
+## Attacks drive their own clip from begin_attack; reactions hold whatever pose
+## they were caught in, since there is no hit-reaction clip yet. Everything else
+## picks a locomotion clip from how fast the fighter is actually moving.
+func _update_visual() -> void:
+	if _visual == null:
+		return
+	match _state_id:
+		FighterState.ATTACK:
+			pass
+		FighterState.HITSTUN, FighterState.KNOCKDOWN:
+			_visual.hold()
+		_:
+			_visual.release_attack()
+			_visual.play_locomotion(
+				Vector2(velocity.x, velocity.z).length(), not is_on_floor())
 
 
 func _update_timers(delta: float) -> void:
@@ -427,8 +439,10 @@ func request_attack() -> bool:
 
 
 ## Called from AttackState once the cancel window is open. `connected` gates the
-## confirms: whiffing a heavy costs you the full recovery.
-func consume_cancel(current: AttackDef, connected: bool) -> StringName:
+## confirms: whiffing a heavy costs you the full recovery. `ticks_since_window`
+## says how long the window has been open, which is what makes rhythm scorable.
+func consume_cancel(current: AttackDef, connected: bool,
+		ticks_since_window: int) -> StringName:
 	if current.cancel_requires_hit and not connected:
 		return FighterState.STAY
 
@@ -451,10 +465,49 @@ func consume_cancel(current: AttackDef, connected: bool) -> StringName:
 
 	if attack == null:
 		return FighterState.STAY
+
+	_score_rhythm(current, ticks_since_window)
 	_clear_attack_buffer()
 	pending_attack = attack
 	cancel_count += 1
 	return FighterState.ATTACK
+
+
+## Judges how close the press was to the moment this move became cancellable.
+##
+## The buffer is not aged during hitstop, so a freeze never counts against the
+## player's timing -- which matters, because hitstop is exactly when the next
+## press happens.
+func _score_rhythm(current: AttackDef, ticks_since_window: int) -> void:
+	var press_age := ATTACK_BUFFER_TICKS - _attack_buffer_ticks
+	var offset := ticks_since_window - press_age
+	var on_beat := absi(offset) <= current.rhythm_window_ticks
+
+	_pending_on_beat = on_beat
+	flow = mini(flow + 1, CombatMath.MAX_FLOW) if on_beat else 0
+
+
+func consume_pending_on_beat() -> bool:
+	var on_beat := _pending_on_beat
+	_pending_on_beat = false
+	return on_beat
+
+
+## Called by AttackState as a move starts, so the fighter can set the damage
+## multiplier and start the clip aligned to this move's own frame data.
+func begin_attack(attack: AttackDef, on_beat: bool,
+		startup_ticks: int, remainder_ticks: int) -> void:
+	strike_scale = CombatMath.strike_scale(on_beat, flow)
+	if _visual == null or not attack.has_animation():
+		return
+	_visual.play_attack(
+		attack.animation, attack.animation_start, attack.animation_impact,
+		attack.animation_end, startup_ticks / 60.0, remainder_ticks / 60.0)
+
+
+func end_attack_visual() -> void:
+	if _visual != null:
+		_visual.release_attack()
 
 
 func request_block() -> bool:
@@ -518,7 +571,8 @@ func deal_hit(attack: AttackDef, victim: Fighter) -> bool:
 	var contact: Vector3 = global_position.lerp(victim.global_position, 0.5) + Vector3.UP * 1.05
 	var blocked := victim.is_blocking_against(global_position)
 	var result := CombatMath.build_hit(attack, self, character_def, victim.character_def,
-		get_facing_direction(), contact, blocked)
+		get_facing_direction(), contact, blocked, strike_scale)
+	result.on_beat = strike_scale > 1.0
 
 	victim.take_hit(result)
 	power = minf(power + attack.power_gain, max_power)
@@ -556,14 +610,18 @@ func _spawn_feedback(result: HitResult) -> void:
 	var color := Color(1, 0.9, 0.6)
 	if result.blocked:
 		color = Color(0.6, 0.8, 1.0)
+	elif result.on_beat:
+		color = Color(1.0, 0.95, 0.75)
 	elif attacker != null and attacker.slot != null:
 		color = attacker.slot.color.lerp(Color.WHITE, 0.5)
 
-	HitSpark.spawn(get_tree().current_scene, result.position, color, result.damage)
+	var size := result.damage * (1.5 if result.on_beat else 1.0)
+	HitSpark.spawn(get_tree().current_scene, result.position, color, size)
 
 	var camera := get_viewport().get_camera_3d() as ArenaCamera
 	if camera != null:
-		camera.add_shake(clampf(result.damage / 26.0, 0.12, 1.0))
+		var strength := clampf(result.damage / 26.0, 0.12, 1.0)
+		camera.add_shake(strength * (1.35 if result.on_beat else 1.0))
 
 
 ## Freezes both fighters for a moment on connect. With no animation to sell the
@@ -639,13 +697,15 @@ func _regenerate_stamina(delta: float) -> void:
 
 
 func _update_flash() -> void:
-	if _body_material == null:
+	if _visual == null:
 		return
 	if _flash_ticks > 0:
 		_flash_ticks -= 1
-		_body_material.albedo_color = Color.WHITE if _flash_ticks > 0 else _base_color
+	_visual.set_hit_flash(float(_flash_ticks) / float(HIT_FLASH_TICKS))
 
 
+## Placeholder until there is a knockdown clip: the model is tipped over rather
+## than animated onto the floor.
 func set_downed(downed: bool) -> void:
 	if _visual == null:
 		return
@@ -674,6 +734,9 @@ func respawn() -> void:
 	_knockdown_pending = false
 	cancel_count = 0
 	attacks_started = 0
+	flow = 0
+	strike_scale = 1.0
+	_pending_on_beat = false
 	# Drop queued intent as well as state: a fighter should not come back and
 	# immediately act on a button pressed before it went down.
 	_clear_attack_buffer()
@@ -689,11 +752,12 @@ func get_state_id() -> StringName:
 
 
 func get_debug_line() -> String:
-	return "%s %-10s %-9s hp %5.1f  pw %5.1f  st %5.1f" % [
+	return "%s %-10s %-9s hp %5.1f  pw %5.1f  st %5.1f  flow %d" % [
 		slot.get_label() if slot != null else "--",
 		character_def.display_name,
 		_state_id,
 		health,
 		power,
 		stamina,
+		flow,
 	]

@@ -9,6 +9,9 @@ extends TestHarness
 ## rather than how quickly the victim finds a ledge.
 const STAGE := Vector3(-9, 0.3, 14)
 const GAP := 1.3
+## Ticks between taps that counts as mashing: too early to score, but far enough
+## apart that the button genuinely releases in between.
+const MASH_DELAY := 3
 
 var _hits: Array[HitResult] = []
 ## Physics tick each hit landed on, so a cancel can be told apart from simply
@@ -64,6 +67,11 @@ func _run() -> void:
 	await _test_invulnerability_denies_hits(kurogane, yamabuki)
 	await _test_dodge_grants_invulnerability(yamabuki)
 	await _test_stamina_gates_dodging(yamabuki)
+
+	_section("Rhythm")
+	_test_animation_data_is_sane(kurogane)
+	await _test_mashing_earns_nothing(kurogane, yamabuki)
+	await _test_timing_the_cancel_pays(kurogane, yamabuki)
 
 	_section("Feedback and flow")
 	await _test_hit_shakes_the_camera(kurogane, yamabuki)
@@ -429,6 +437,84 @@ func _test_stamina_gates_dodging(fighter: Fighter) -> void:
 	fighter.stamina = 1.0
 	await _ticks(60)
 	_check(fighter.stamina > 1.0, "stamina regenerates (%.1f)" % fighter.stamina)
+
+
+# --- Rhythm ---
+
+## Frame data owns gameplay timing and the clip is scaled to fit it, so the only
+## way the two can disagree is if a move names a clip that is missing or puts its
+## moment of contact outside the slice it actually plays.
+func _test_animation_data_is_sane(fighter: Fighter) -> void:
+	var library: AnimationLibrary = FighterVisual.ANIMATIONS
+	var moves: Array[AttackDef] = [
+		fighter.move_set.heavy, fighter.move_set.launcher,
+		fighter.move_set.air_light, fighter.move_set.air_heavy,
+	]
+	moves.append_array(fighter.move_set.light_chain)
+
+	for attack in moves:
+		_check(attack.has_animation(), "%s names an animation" % attack.display_name)
+		if not attack.has_animation():
+			continue
+		_check(library.has_animation(attack.animation),
+			"%s's clip '%s' exists in the library" % [attack.display_name, attack.animation])
+		_check(attack.animation_start <= attack.animation_impact
+				and attack.animation_impact <= attack.animation_end,
+			"%s's contact sits inside its slice (%.2f in %.2f..%.2f)" % [
+				attack.display_name, attack.animation_impact,
+				attack.animation_start, attack.animation_end])
+		if library.has_animation(attack.animation):
+			_check(attack.animation_end <= library.get_animation(attack.animation).length + 0.01,
+				"%s's slice fits inside '%s'" % [attack.display_name, attack.animation])
+
+
+## Mashing still combos -- it just earns nothing. That is the whole shape of the
+## rhythm system: never punish the button masher, only reward the player who waits.
+func _test_mashing_earns_nothing(attacker: Fighter, victim: Fighter) -> void:
+	# Three ticks, not one: two taps a single tick apart give the button no
+	# released frame in between, so the second never registers as a new press.
+	# No human presses twice in 16ms either.
+	var result := await _chain_with_delay(attacker, victim, MASH_DELAY)
+	_check(result.y == 0, "mashing the follow-up earns no flow (flow %d)" % result.y)
+	_check(result.x > 0.0, "mashing still combos -- the second hit lands (%.1f damage)" % result.x)
+
+
+func _test_timing_the_cancel_pays(attacker: Fighter, victim: Fighter) -> void:
+	var mashed := await _chain_with_delay(attacker, victim, MASH_DELAY)
+
+	# Sweep the delay to find where the window actually is, rather than
+	# re-deriving it here and duplicating the fighter's own arithmetic.
+	var best_damage := 0.0
+	var on_beat_delays: Array[int] = []
+	for delay in [MASH_DELAY, 6, 9, 12, 15, 18, 21, 24]:
+		var result := await _chain_with_delay(attacker, victim, delay)
+		if result.y > 0:
+			on_beat_delays.append(delay)
+			best_damage = maxf(best_damage, result.x)
+
+	_check(not on_beat_delays.is_empty(),
+		"there is a delay that scores on beat (hit at %s)" % str(on_beat_delays))
+	_check(not on_beat_delays.has(MASH_DELAY), "pressing instantly never scores on beat")
+	_check(best_damage > mashed.x,
+		"an on-beat follow-up hits harder than a mashed one (%.1f vs %.1f)"
+			% [best_damage, mashed.x])
+
+
+## Runs jab into its follow-up with `delay` ticks between the two presses.
+## Returns the follow-up's damage in x and the resulting flow in y.
+func _chain_with_delay(attacker: Fighter, victim: Fighter, delay: int) -> Vector2:
+	await _stage(attacker, victim)
+	var source := _source(attacker)
+
+	_tap(source, InputFrame.Action.LIGHT)
+	await _pinned_ticks(delay, attacker, victim)
+	_tap(source, InputFrame.Action.LIGHT)
+	await _pinned_until_hits(2, attacker, victim, 100)
+
+	var flow := attacker.flow
+	var damage := _hits[1].damage if _hits.size() > 1 else 0.0
+	await _pinned_ticks(30, attacker, victim)
+	return Vector2(damage, flow)
 
 
 # --- Feedback and flow ---

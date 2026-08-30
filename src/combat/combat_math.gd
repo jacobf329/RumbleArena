@@ -16,6 +16,22 @@ const BLOCK_STUN_SCALE := 0.6
 ## Stamina burned per point of damage absorbed on block.
 const BLOCK_STAMINA_PER_DAMAGE := 1.6
 
+## Damage and knockback bonus for a strike launched on beat, before flow.
+const ON_BEAT_STRIKE_BONUS := 0.25
+## Each consecutive on-beat link adds this much on top, up to MAX_FLOW.
+const FLOW_STRIKE_BONUS := 0.09
+const MAX_FLOW := 4
+## Startup multiplier for a move cancelled into on beat. Rhythm is rewarded in
+## speed as well as damage, so a clean chain visibly outruns a mashed one.
+const ON_BEAT_STARTUP_SCALE := 0.72
+
+
+## Damage/knockback multiplier for a strike, given how it was launched.
+static func strike_scale(on_beat: bool, flow: int) -> float:
+	if not on_beat:
+		return 1.0
+	return 1.0 + ON_BEAT_STRIKE_BONUS + FLOW_STRIKE_BONUS * mini(flow, MAX_FLOW)
+
 ## Speed above which landing while still stunned puts you on the floor.
 const KNOCKDOWN_SPEED := 11.0
 ## Impact speed into a wall that causes a splat.
@@ -53,15 +69,16 @@ static func scale_ticks(ticks: int, scale: float) -> int:
 
 
 static func build_hit(attack: AttackDef, attacker: Node3D, attacker_def: CharacterDef,
-		victim_def: CharacterDef, facing: Vector3, at: Vector3, blocked: bool) -> HitResult:
+		victim_def: CharacterDef, facing: Vector3, at: Vector3, blocked: bool,
+		strike_scale := 1.0) -> HitResult:
 	var result := HitResult.new()
 	result.attacker = attacker
 	result.attack = attack
 	result.position = at
 	result.blocked = blocked
 
-	result.damage = damage(attack, attacker_def)
-	var speed := knockback_speed(attack, attacker_def, victim_def)
+	result.damage = damage(attack, attacker_def) * strike_scale
+	var speed := knockback_speed(attack, attacker_def, victim_def) * strike_scale
 	var stun := hitstun_ticks(attack, attacker_def, victim_def)
 
 	if blocked:

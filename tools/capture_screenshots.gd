@@ -41,6 +41,7 @@ func _ready() -> void:
 	await _pose(POSES)
 	await _capture("m1_four_players.png")
 
+	await _roster_shot()
 	await _combat_shot()
 
 	# Two fighters close together, to show the camera pushing in.
@@ -49,6 +50,19 @@ func _ready() -> void:
 	await _capture("m1_camera_close.png")
 
 	get_tree().quit()
+
+
+## Four fighters side by side, so the per-player hue shift can be judged: one
+## mesh and one texture, recoloured only where the crimson is.
+func _roster_shot() -> void:
+	await _pose([
+		Vector3(-6.0, 0.3, 13.0), Vector3(-2.0, 0.3, 13.0),
+		Vector3(2.0, 0.3, 13.0), Vector3(6.0, 0.3, 13.0),
+	])
+	for fighter in _fighters:
+		fighter.snap_facing(Vector3.BACK)
+	await get_tree().physics_frame
+	await _capture("roster.png")
 
 
 ## Catches the frame a heavy connects: hit spark, flash, and the meters

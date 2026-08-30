@@ -13,6 +13,7 @@ var _active := 0
 var _recovery := 0
 var _connected := false
 var _stepped := false
+var _on_beat := false
 var _hit_targets: Array = []
 
 
@@ -22,7 +23,14 @@ func get_id() -> StringName:
 
 func enter(_previous: StringName) -> void:
 	_attack = fighter.pending_attack
+	_on_beat = fighter.consume_pending_on_beat()
+
 	var scale: float = fighter.character_def.get_attack_speed_scale()
+	if _on_beat:
+		# Rhythm pays in speed as well as damage, so a clean chain visibly
+		# outruns a mashed one rather than just reading higher on the numbers.
+		scale *= CombatMath.ON_BEAT_STARTUP_SCALE
+
 	_startup = CombatMath.scale_ticks(_attack.ticks_startup, scale)
 	_active = _attack.ticks_active
 	_recovery = CombatMath.scale_ticks(_attack.ticks_recovery, scale)
@@ -31,6 +39,7 @@ func enter(_previous: StringName) -> void:
 	_stepped = false
 	_hit_targets.clear()
 	fighter.attacks_started += 1
+	fighter.begin_attack(_attack, _on_beat, _startup, _active + _recovery)
 
 
 func physics_update(delta: float) -> StringName:
@@ -48,8 +57,10 @@ func physics_update(delta: float) -> StringName:
 
 	_tick += 1
 
-	if _tick >= _startup + _active + _attack.cancel_window_start:
-		var next: StringName = fighter.consume_cancel(_attack, _connected)
+	var window_opens := _startup + _active + _attack.cancel_window_start
+	if _tick >= window_opens:
+		var next: StringName = fighter.consume_cancel(
+			_attack, _connected, _tick - window_opens)
 		if next != STAY:
 			return next
 
@@ -66,6 +77,10 @@ func _query_hits() -> void:
 		_hit_targets.append(victim)
 		if fighter.deal_hit(_attack, victim):
 			_connected = true
+
+
+func exit() -> void:
+	fighter.end_attack_visual()
 
 
 func _finish() -> StringName:
