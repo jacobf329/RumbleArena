@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Realm Runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
 <style>
   :root{--safe-top:env(safe-area-inset-top,0px)}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -19,7 +22,7 @@
     justify-content:center;text-align:center;padding:24px;z-index:5;
     background:radial-gradient(120% 90% at 50% 30%,rgba(48,32,20,.72),rgba(8,6,5,.94))}
   .layer.hidden{display:none}
-  h1{font-size:clamp(38px,13vw,74px);letter-spacing:.06em;line-height:1;
+  h1{font-family:Cinzel,Georgia,serif;font-size:clamp(34px,11.5vw,68px);letter-spacing:.05em;line-height:1.04;
     color:#f0c869;text-shadow:0 3px 0 #6b3d12,0 0 26px rgba(240,180,80,.45)}
   h1 small{display:block;font-size:.3em;letter-spacing:.42em;color:#c9a86a;
     margin-top:14px;text-shadow:none}
@@ -30,14 +33,14 @@
   .keys{display:grid;grid-template-columns:auto auto;gap:6px 16px;justify-content:center;
     margin-top:10px;font-size:14px;color:#bda478}
   .keys span:nth-child(odd){color:#f0c869}
-  button.big{font-family:inherit;font-size:22px;letter-spacing:.16em;color:#2a1a0c;
+  button.big{font-family:Cinzel,Georgia,serif;font-size:22px;letter-spacing:.16em;color:#2a1a0c;
     background:linear-gradient(#f4d284,#c99236);border:none;border-radius:8px;
     padding:16px 44px;margin-top:6px;cursor:pointer;
     box-shadow:0 5px 0 #7d5518,0 8px 22px rgba(0,0,0,.55)}
   button.big:active{transform:translateY(3px);box-shadow:0 2px 0 #7d5518}
   .stats{display:flex;gap:34px;margin:18px 0 8px}
   .stat{min-width:92px}
-  .stat .v{font-size:34px;color:#f0c869;line-height:1.1}
+  .stat .v{font-family:Cinzel,Georgia,serif;font-size:34px;color:#f0c869;line-height:1.1;font-variant-numeric:tabular-nums}
   .stat .k{font-size:11px;letter-spacing:.24em;color:#a68e62;text-transform:uppercase}
   .tip{margin-top:18px;font-size:13px;color:#9c855c;max-width:420px;line-height:1.6}
   #pause{position:fixed;top:calc(10px + env(safe-area-inset-top));
@@ -766,7 +769,7 @@ function drawArch(a) {
   const p = proj(0, SPRING + RI + 0.42, a.z);
   if (p && p.s > 14) {
     ctx.fillStyle = '#4a392a';
-    ctx.font = 'bold ' + Math.max(7, p.s * 0.5) + 'px Georgia, serif';
+    ctx.font = 'bold ' + Math.max(7, p.s * 0.5) + 'px Cinzel, Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillText('\u2020', p.x, p.y + p.s * 0.18);
   }
@@ -1189,10 +1192,10 @@ function drawHUD() {
   const top = SAFE_TOP;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(240,200,105,0.95)';
-  ctx.font = 'bold ' + Math.round(Math.min(34, W * 0.075)) + 'px Georgia, serif';
+  ctx.font = 'bold ' + Math.round(Math.min(34, W * 0.075)) + 'px Cinzel, Georgia, serif';
   ctx.fillText(String(G.score), 16, top + 14);
   ctx.fillStyle = 'rgba(200,178,130,0.85)';
-  ctx.font = Math.round(Math.min(15, W * 0.036)) + 'px Georgia, serif';
+  ctx.font = Math.round(Math.min(15, W * 0.036)) + 'px Cinzel, Georgia, serif';
   ctx.fillText(Math.floor(G.dist) + ' paces', 17, top + Math.min(34, W * 0.075) + 18);
 
   // gold tally
@@ -1202,7 +1205,7 @@ function drawHUD() {
   ctx.fillStyle = '#ffd873';
   ctx.beginPath(); ctx.ellipse(cx, cy, 6, 8, 0, 0, 6.2832); ctx.fill();
   ctx.fillStyle = '#f0c869'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 20px Georgia, serif';
+  ctx.font = 'bold 20px Cinzel, Georgia, serif';
   ctx.fillText(String(G.coins), cx + 14, cy + 1);
 
   // relic timers
