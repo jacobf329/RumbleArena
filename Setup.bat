@@ -10,13 +10,14 @@ echo   ==================================
 echo.
 echo   This does two things:
 echo     1. Makes sure Godot 4.3 is on this PC
-echo     2. Puts a RumbleArena shortcut on your Desktop
+echo     2. Prepares the game's assets (first run only)
+echo     3. Puts a RumbleArena shortcut on your Desktop
 echo.
 
 call "%~dp0tools\find_godot.bat"
 if defined GODOT_EXE goto :have_godot
 
-echo   [1/2] Godot 4.3 is not on this PC yet.
+echo   [1/3] Godot 4.3 is not on this PC yet.
 echo.
 echo         I can download it from the official Godot releases page
 echo         - about 60 MB - and put it in this folder. Nothing gets
@@ -33,10 +34,28 @@ if not defined GODOT_EXE goto :nogodot
 goto :have_godot
 
 :have_godot
-echo   [1/2] Godot is ready:
+echo   [1/3] Godot is ready:
 echo         !GODOT_EXE!
 echo.
-echo   [2/2] Creating the Desktop shortcut...
+
+REM A freshly downloaded copy has no .godot folder, so Godot has not yet
+REM imported the assets or built its global class cache. Launching the game
+REM without that cache leaves every class_name type unresolved: the autoloads
+REM fail to compile and NOTHING responds to input. The editor pass builds it.
+if exist "%~dp0.godot\global_script_class_cache.cfg" goto :imported
+echo   [2/3] Preparing assets. This takes a minute or two, and only
+echo         happens once.
+"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit
+echo         Done.
+echo.
+goto :shortcut
+
+:imported
+echo   [2/3] Assets already prepared.
+echo.
+
+:shortcut
+echo   [3/3] Creating the Desktop shortcut...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\create_shortcut.ps1" -ProjectDir "%~dp0."
 if errorlevel 1 goto :noshortcut
 

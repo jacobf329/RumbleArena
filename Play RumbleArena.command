@@ -56,6 +56,18 @@ if [ "${1:-}" = "--compat" ]; then
 	EXTRA=(--rendering-driver opengl3 --rendering-method gl_compatibility)
 fi
 
+# A freshly downloaded copy has no .godot folder, so Godot has not yet imported
+# the assets or built its global class cache. Launching the game without that
+# cache leaves every class_name type unresolved: the autoloads fail to compile
+# and nothing responds to input. The editor pass builds it.
+if [ ! -f ".godot/global_script_class_cache.cfg" ]; then
+	echo
+	echo "  First run: preparing assets. This takes a minute or two,"
+	echo "  and only happens once."
+	"$GODOT_BIN" --headless --path "$PWD" --editor --quit >/dev/null 2>&1
+	echo "  Ready."
+fi
+
 echo
 echo "  RumbleArena"
 echo "  Using: $GODOT_BIN"

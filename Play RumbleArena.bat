@@ -11,6 +11,19 @@ echo.
 call "%~dp0tools\find_godot.bat"
 if not defined GODOT_EXE goto :missing
 
+REM A freshly downloaded copy has no .godot folder, so Godot has not yet
+REM imported the assets or built its global class cache. Launching the game
+REM without that cache leaves every class_name type unresolved: the autoloads
+REM fail to compile and NOTHING responds to input. The editor pass builds it.
+if exist "%~dp0.godot\global_script_class_cache.cfg" goto :ready
+echo   First run: preparing assets. This takes a minute or two,
+echo   and only happens once.
+echo.
+"!GODOT_EXE!" --headless --path "%~dp0." --editor --quit
+echo   Ready.
+echo.
+
+:ready
 set "EXTRA="
 if /i "%~1"=="--compat" set "EXTRA=--rendering-driver opengl3 --rendering-method gl_compatibility"
 

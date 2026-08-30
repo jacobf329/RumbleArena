@@ -59,9 +59,16 @@ least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
    until it is extracted, so this step is not optional.
 3. **Double-click `Setup.bat`** in the extracted folder.
 
-Setup finds Godot, offers to download it if you do not have it, and puts a
-RumbleArena shortcut on your Desktop. After that you launch from the Desktop
-icon.
+Setup finds Godot, offers to download it if you do not have it, prepares the
+game's assets, and puts a RumbleArena shortcut on your Desktop. After that you
+launch from the Desktop icon.
+
+The asset step takes a minute or two and only happens once. **Do not skip it by
+launching Godot by hand on a fresh copy** — a freshly downloaded project has no
+`.godot` folder, so Godot has not yet built its global class cache, and without
+that cache every `class_name` type is unresolved: the autoloads fail to compile
+and nothing responds to input, while the arena still renders. Both launchers do
+this import automatically when the cache is missing.
 
 ### Other platforms, or doing it by hand
 
@@ -179,11 +186,17 @@ valuable animations to add next.
 ## Testing
 
 ```sh
-GODOT=/path/to/godot ./run_tests.sh
+GODOT=/path/to/godot ./run_tests.sh          # normal run
+GODOT=/path/to/godot ./run_tests.sh --cold   # also verify a fresh download boots
 ```
 
-Imports the project to surface script and scene parse errors, then runs the
-suites: 36 movement, input and camera checks, and 51 combat checks. Every test
+`--cold` deletes the asset cache and follows exactly what the launcher does on a
+fresh download. The normal run cannot catch that class of failure, because its
+first step is an import pass — which builds the very cache whose absence is the
+bug.
+
+The normal run imports the project to surface script and scene parse errors,
+then runs the suites: 36 movement, input and camera checks, and 51 combat checks. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.
