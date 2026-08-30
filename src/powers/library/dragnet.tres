@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="Dragnet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/powers/dragnet.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Dragnet"
+ticks_startup = 20
+ticks_active = 2
+ticks_recovery = 28
+damage = 0.0
+knockback = 0.0
+ticks_hitstun = 1
+ticks_hitstop = 0
+power_gain = 0.0
+hitbox_size = Vector3(0.1, 0.1, 0.1)
+hitbox_offset = Vector3(0, 0.5, 0)
+animation = &"shoulder_throw"
+animation_start = 0.2
+animation_impact = 1.0
+animation_end = 2.0
+cancel_window_start = 40
+cancel_requires_hit = true
+power_cost = 95.0
+cooldown_seconds = 28.0
+radius = 9.0
+gather_distance = 1.5
+haul_seconds = 0.45
+haul_damage = 4.0
+haul_hitstun = 34

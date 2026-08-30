@@ -28,7 +28,7 @@ func enter(_previous: StringName) -> void:
 	_attack = fighter.pending_attack
 	_on_beat = fighter.consume_pending_on_beat()
 
-	var scale: float = fighter.character_def.get_attack_speed_scale()
+	var scale: float = fighter.get_attack_speed_scale()
 	if _on_beat:
 		# Rhythm pays in speed as well as damage, so a clean chain visibly
 		# outruns a mashed one rather than just reading higher on the numbers.

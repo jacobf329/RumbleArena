@@ -81,7 +81,12 @@ func _run() -> void:
 	await _test_ogre_rampage_absorbs_small_hits(kurogane)
 	await _test_blink_strike_teleports_behind(null_fighter, yamabuki)
 	await _test_system_seize_takes_every_turret(null_fighter)
-	_test_unbuilt_powers_are_simply_absent(jinsoku)
+	await _test_afterimage_flurry_dashes_and_leaves_a_decoy(jinsoku, yamabuki)
+	await _test_the_decoy_punishes_whoever_hits_it(jinsoku, yamabuki)
+	await _test_hundred_steps_speeds_her_up(jinsoku, yamabuki)
+	await _test_grapple_line_finds_high_ground(yamabuki, kurogane)
+	await _test_dragnet_hauls_everyone_in(yamabuki)
+	_test_every_pickable_ninja_has_a_full_kit()
 
 	_section("Rhythm")
 	_test_animation_data_is_sane(kurogane)
@@ -677,12 +682,178 @@ func _test_system_seize_takes_every_turret(fighter: Fighter) -> void:
 	await _ticks(40)
 
 
-## Characters whose powers are not designed yet get empty slots rather than
-## somebody else's move, so the buttons do nothing instead of lying.
-func _test_unbuilt_powers_are_simply_absent(fighter: Fighter) -> void:
-	_check(fighter.character_def.signature == null and fighter.character_def.ultimate == null,
-		"%s has no powers yet, rather than borrowed ones"
-			% fighter.character_def.display_name)
+# --- Jinsoku ---
+
+## The dash is the attack; the decoy is what makes it hers. A STRENGTH 2 /
+## TOUGHNESS 2 character's signature is about not being where the answer lands.
+func _test_afterimage_flurry_dashes_and_leaves_a_decoy(jinsoku: Fighter, victim: Fighter) -> void:
+	await _stage(jinsoku, victim, 3.0)
+	jinsoku.power = jinsoku.max_power
+	var origin := jinsoku.global_position
+
+	_tap(_source(jinsoku), InputFrame.Action.SIGNATURE)
+	await _ticks(14)
+
+	var moved := jinsoku.global_position.distance_to(origin)
+	_check(moved > 1.5, "the dash actually carries her (%.1f m)" % moved)
+
+	var decoys := get_tree().get_nodes_in_group(&"afterimages")
+	_check(decoys.size() == 1, "one afterimage is left behind (%d)" % decoys.size())
+	if decoys.is_empty():
+		return
+	var decoy := decoys[0] as Afterimage
+	_check(decoy.global_position.distance_to(origin) < 0.6,
+		"it stands where she was, not where she went")
+	_check(decoy.owner_fighter == jinsoku, "it knows whose it is")
+
+	# It is an illusion, not a wall: it goes on its own.
+	await _ticks(decoy.lifetime_ticks + 5)
+	_check(get_tree().get_nodes_in_group(&"afterimages").is_empty(),
+		"it expires rather than standing there for the rest of the match")
+
+
+## Swinging at the wrong Jinsoku costs you. This is the entire point of the
+## decoy -- one that could be cleared for free would just be scenery.
+func _test_the_decoy_punishes_whoever_hits_it(jinsoku: Fighter, victim: Fighter) -> void:
+	await _stage(jinsoku, victim, 8.0)
+	jinsoku.power = jinsoku.max_power
+	_tap(_source(jinsoku), InputFrame.Action.SIGNATURE)
+	await _ticks(16)
+
+	var decoys := get_tree().get_nodes_in_group(&"afterimages")
+	if decoys.is_empty():
+		_check(false, "a decoy exists to be hit")
+		return
+	var decoy := decoys[0] as Afterimage
+
+	# Put the victim on top of it and have them swing.
+	victim.global_position = decoy.global_position - Vector3(0, 0, 1.0)
+	victim.snap_facing(decoy.global_position - victim.global_position)
+	await _ticks(4)
+	var health_before := victim.health
+
+	_tap(_source(victim), InputFrame.Action.LIGHT)
+	await _ticks(40)
+
+	_check(get_tree().get_nodes_in_group(&"afterimages").is_empty(),
+		"hitting it pops it")
+	_check(victim.health < health_before,
+		"and the burst hurts whoever swung (%.1f -> %.1f)" % [health_before, victim.health])
+	await _ticks(40)
+
+
+## Kurogane's ultimate makes hits stop mattering; hers makes the clock stop
+## mattering. Two buff ultimates on different axes, which is what keeps them
+## from being the same ultimate.
+func _test_hundred_steps_speeds_her_up(jinsoku: Fighter, victim: Fighter) -> void:
+	await _stage(jinsoku, victim, 3.0)
+	var ordinary := jinsoku.get_attack_speed_scale()
+
+	jinsoku.power = jinsoku.max_power
+	_tap(_source(jinsoku), InputFrame.Action.ULTIMATE)
+	await _ticks(40)
+
+	_check(jinsoku.is_hasted(), "the ultimate hastes her")
+	_check(jinsoku.get_attack_speed_scale() < ordinary,
+		"her attacks come out faster (%.2f -> %.2f)"
+			% [ordinary, jinsoku.get_attack_speed_scale()])
+
+	# It has to end, or it is not an ultimate, it is a stat.
+	var ultimate: Power = jinsoku.character_def.ultimate
+	await _ticks(ultimate.get("duration_ticks") + 10)
+	_check(not jinsoku.is_hasted(), "and it wears off")
+	_check(is_equal_approx(jinsoku.get_attack_speed_scale(), ordinary),
+		"leaving her exactly as she was")
+
+
+# --- Yamabuki ---
+
+## Written against the arena's geometry rather than its Climbable nodes: the
+## Proving Ground has one climbable wall, so keying the power to those would
+## have given AGILITY 5 a single place in the level to use its own verb.
+func _test_grapple_line_finds_high_ground(yamabuki: Fighter, other: Fighter) -> void:
+	await _stage(yamabuki, other, 4.0)
+	# Open floor south-east of the centre platform, facing it. The platform top
+	# is at y ~3.6. Deliberately clear of the south ramp: standing a fighter
+	# inside arena geometry pins them against the collision solver, and this
+	# would then measure that rather than the power.
+	yamabuki.global_position = Vector3(6.0, 0.3, 9.0)
+	yamabuki.snap_facing(Vector3(0.0, 0.0, -1.0))
+	await _ticks(10)
+
+	var start_y := yamabuki.global_position.y
+	yamabuki.power = yamabuki.max_power
+	_tap(_source(yamabuki), InputFrame.Action.SIGNATURE)
+
+	var highest := start_y
+	for i in 90:
+		await get_tree().physics_frame
+		highest = maxf(highest, yamabuki.global_position.y)
+
+	_check(highest > start_y + 1.2,
+		"the line takes her up (%.1f m -> %.1f m)" % [start_y, highest])
+	_check(yamabuki.global_position.y > start_y + 0.8,
+		"and she is still up there when she lands (%.1f m)" % yamabuki.global_position.y)
+
+
+## Almost no damage on purpose: an AGILITY character's ultimate should create
+## the situation, not finish it.
+func _test_dragnet_hauls_everyone_in(yamabuki: Fighter) -> void:
+	await _stage(yamabuki, yamabuki)
+	yamabuki.global_position = STAGE
+	var ring: Array[Fighter] = []
+	for fighter: Fighter in _fighters:
+		if fighter == yamabuki:
+			continue
+		ring.append(fighter)
+
+	var offsets := [Vector3(5.0, 0, 0), Vector3(-4.5, 0, 1.0), Vector3(0, 0, 5.5)]
+	for i in ring.size():
+		ring[i].global_position = STAGE + offsets[i]
+	await _ticks(6)
+
+	var before: Array[float] = []
+	for fighter in ring:
+		before.append(fighter.global_position.distance_to(yamabuki.global_position))
+
+	yamabuki.power = yamabuki.max_power
+	_tap(_source(yamabuki), InputFrame.Action.ULTIMATE)
+	await _ticks(60)
+
+	var hauled := 0
+	for i in ring.size():
+		if ring[i].global_position.distance_to(yamabuki.global_position) < before[i] - 1.0:
+			hauled += 1
+	_check(hauled == ring.size(),
+		"everyone in range is dragged toward her (%d of %d)" % [hauled, ring.size()])
+
+	var stunned := 0
+	for fighter in ring:
+		if fighter.get_state_id() in [FighterState.HITSTUN, FighterState.KNOCKDOWN]:
+			stunned += 1
+	_check(stunned > 0, "and they arrive off their feet, not swinging")
+	await _ticks(60)
+
+
+## Every ninja you can pick answers both power buttons.
+##
+## This used to assert the opposite -- that unbuilt powers were empty rather
+## than borrowed, so the buttons did nothing instead of lying. That was the
+## right rule while the roster was half-built and the wrong one to leave
+## standing: with four players on a couch, two of them holding a character whose
+## RT and R3 do nothing is not a missing feature anybody diagnoses, it is a
+## broken controller. Anyone added to the roster is signing up for a full kit.
+func _test_every_pickable_ninja_has_a_full_kit() -> void:
+	for index in CharacterRoster.size():
+		var definition := CharacterRoster.at(index)
+		_check(definition.signature != null,
+			"%s has a signature" % definition.display_name)
+		_check(definition.ultimate != null,
+			"%s has an ultimate" % definition.display_name)
+		# Distinct resources, not one power wired into two slots -- which would
+		# pass a null check while still lying about having two moves.
+		_check(definition.signature != definition.ultimate,
+			"%s's two powers are actually different moves" % definition.display_name)
 
 
 func _crafted_hit(damage: float) -> HitResult:

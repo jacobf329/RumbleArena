@@ -352,7 +352,8 @@ Changes made off the back of actually playing it:
 Only after M4 is judged fun.
 
 - [x] AI bots to fill empty slots
-- [ ] Remaining six ninjas as data + power scripts
+- [x] Full kits for the pickable roster (Jinsoku, Yamabuki)
+- [ ] The remaining four ninjas as data + power scripts
 - [ ] 2–3 more arenas with distinct interactable themes
 - [ ] Balance pass across the matchup matrix
 - [ ] Audio, real models, VFX polish
@@ -401,6 +402,54 @@ better than an hour of asserting things:
 Still open: bots ignore the interactables entirely. They do not climb, throw or
 hack, which quietly makes the environment a human-only advantage — the opposite
 of pillar P2.
+
+### Full kits for everyone you can pick
+
+Half the pickable roster had empty signature and ultimate slots. With four
+players on a couch that is not a missing feature anybody diagnoses — it is two
+of them concluding their controller is broken. The old test asserted the empty
+slots were *deliberate*, which was the right rule while the roster was
+half-built and the wrong one to leave standing; it now asserts the opposite,
+that anyone on the roster has both buttons wired to different moves.
+
+- **Jinsoku** — Afterimage Flurry dashes her through you and leaves a decoy
+  standing where she was; hitting it bursts it. Hundred Steps is 7s of moving
+  and swinging much faster. Deliberately a different axis from Ogre Rampage:
+  his answer is to hit harder, hers is to cover space.
+- **Yamabuki** — Grapple Line rides her to the nearest high ground. Dragnet
+  hauls everyone in the arena to her feet on a solved arc, doing almost no
+  damage: an AGILITY character's ultimate should create the situation, not
+  finish it.
+
+### What this turned up
+
+- **Three separate systems delete a velocity you meant.** Attack drift, hitstun
+  drag and air control settling toward zero all exist to stop a fighter
+  sliding, and all three are correct right up until a power deliberately threw
+  somebody somewhere. Yamabuki's grapple arc died in two ticks; Dragnet's haul
+  died to hitstun drag with the victims a metre from where they started. Fixed
+  once, as `apply_launch` — velocity a power meant, protected for a set number
+  of ticks — rather than three times as exceptions. The mantle bug in M3 was
+  the same shape and was fixed locally; it should have been this.
+- **`bool(null)` is a runtime error in GDScript**, not `false`. The bot's
+  "is this target still there?" check read `is_eliminated` off the node so a
+  decoy — which has no such property — could occupy the slot. `Object.get`
+  returns null for a missing property, the cast threw, and the call fell out
+  into the function's default of `false`. It type-checked, it imported clean,
+  and every decoy read as "not there": bots stood still, staring at one.
+  Comparing `!= true` instead is both correct and cheaper.
+- **Reusing the hue shader for the decoy produced coloured noise.** Near-grey
+  pixels have a numerically meaningless hue, which is harmless while the
+  saturation mask leaves them alone and explodes the moment you raise
+  saturation across the whole texture to make a dark ninja visible on a pale
+  floor. The decoy is a flat silhouette in the player's colour now, which is
+  also the better answer to what it is for: it has to read at a glance,
+  mid-fight, and detail would only make it harder to tell from the real one.
+- **A test can pass because the thing it was watching timed out.** The first
+  version of "the bot walks up and pops the decoy" waited 240 ticks for a decoy
+  with a 150-tick lifetime. It passed before the fix and after it, for the same
+  wrong reason. Anything with a timer in it needs the timer set beyond the
+  window the test is watching.
 
 ---
 

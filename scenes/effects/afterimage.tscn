@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/effects/afterimage.gd" id="1_afterimage"]
+[ext_resource type="PackedScene" path="res://assets/characters/ninja/ninja_model.glb" id="2_model"]
+[ext_resource type="Script" path="res://src/characters/fighter_visual.gd" id="3_visual"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_decoy"]
+radius = 0.46
+height = 1.9
+
+[node name="Afterimage" type="Area3D"]
+script = ExtResource("1_afterimage")
+max_health = 1.0
+debris_count = 0
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+shape = SubResource("CapsuleShape3D_decoy")
+
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("3_visual")
+ghost = true
+
+[node name="Model" parent="Visual" instance=ExtResource("2_model")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)

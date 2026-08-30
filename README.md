@@ -43,6 +43,11 @@ a pad fills, so none of that is a special case:
 
 ![Four bots fighting each other](docs/images/m5-bot-brawl.png)
 
+Jinsoku's Afterimage Flurry: she dashes through you, and the decoy is left
+standing where she was. Hitting it costs you.
+
+![Jinsoku's afterimage](docs/images/m5-afterimage.png)
+
 ## Design
 
 - **[`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)** — pillars, stat system,
@@ -206,9 +211,13 @@ whiffed special still costs you.
 |---|---|---|
 | **Kurogane** | Seismic Palm — a shockwave that cracks the floor into debris he alone can lift | Ogre Rampage — 8s of armour; small hits land but stop interrupting him |
 | **Null** | Blink Strike — teleports behind the nearest fighter and hits their back | System Seize — every turret in the arena turns on everyone but her |
+| **Jinsoku** | Afterimage Flurry — dashes through you and leaves a decoy standing where she was; hit the decoy and it bursts | Hundred Steps — 7s of moving and attacking far faster |
+| **Yamabuki** | Grapple Line — a line to the nearest high ground, and a ride to it | Dragnet — hauls everyone in the arena to her feet, off their feet |
 
-Jinsoku and Yamabuki have no powers yet; their buttons do nothing rather than
-firing someone else's move.
+Every ninja you can pick answers both power buttons. The two ultimates that
+buff rather than hit are deliberately on different axes: Kurogane's makes hits
+stop mattering, Jinsoku's makes the clock stop mattering, so the answer to one
+is to hit harder and the answer to the other is to cover space.
 
 **A match** needs two players and starts on a countdown that restarts whenever
 someone else joins. Three stocks each, last ninja standing wins, and if the
@@ -260,7 +269,11 @@ it, so the freeze never eats your timing.
   That clears the ramps and pillars most of the time; expect to see a CPU scuff
   along a platform edge for a second before it works out the detour.
 - **Bots ignore the arena.** They do not climb, throw crates, or hack turrets
-  yet, so the interactables are still a human advantage.
+  yet, so the interactables are still a human advantage. They *do* fall for
+  Jinsoku's afterimage, which was the one piece worth wiring in: a decoy that
+  only fooled humans would have been half a power.
+- **Four of the eight ninjas in the design document exist.** Shirayuki,
+  Kagerou, Raiden-Maru and Mokushi are written up but not built.
 - `rigify_clip.glb` imports as 0.07s despite being 3.03s in the source, so it is
   unused. Worth re-exporting.
 
@@ -291,8 +304,8 @@ first step is an import pass — which builds the very cache whose absence is th
 bug.
 
 The normal run imports the project to surface script and scene parse errors,
-then runs the suites: 77 movement/input/camera, 106 combat, 50 interaction, 40
-match-flow and 49 bot checks — 322 in all. Every test
+then runs the suites: 77 movement/input/camera, 132 combat, 50 interaction, 40
+match-flow and 52 bot checks — 351 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

@@ -51,7 +51,13 @@ var skill: float = 0.5
 var crowd_pull: float = DEFAULT_CROWD_PULL
 
 var _index: int
-var _target: Fighter
+## A Node3D rather than a Fighter, because an afterimage is a legitimate thing
+## to be fighting. Everything the bot asks of a target -- where it is, whether
+## it is still there, what it is doing -- a decoy can answer, and requiring a
+## real Fighter here would have made Jinsoku's signature power do nothing at all
+## to a CPU. Duck-typed on purpose: the decoy earns its place by being
+## convincing, not by inheriting.
+var _target: Node3D
 var _retarget := 0.0
 var _attack_cooldown := 0.0
 var _reaction := 0.0
@@ -178,7 +184,7 @@ func _check_for_a_wall(delta: float) -> void:
 
 func _fight(distance: float) -> void:
 	# Guarding is the difference between a bot that trades and one that plays.
-	if distance < ENGAGE_RANGE * 1.4 and _target.get_state_id() == FighterState.ATTACK:
+	if distance < ENGAGE_RANGE * 1.4 and _target_state() == FighterState.ATTACK:
 		if randf() < 0.25 + 0.5 * skill:
 			_hold(InputFrame.Action.BLOCK, 22)
 			_reaction = _reaction_time()
@@ -193,7 +199,7 @@ func _fight(distance: float) -> void:
 
 	# Grab a guard rather than beating on it: the bot should demonstrate the
 	# rock-paper-scissors rather than lose to it.
-	if _target.get_state_id() == FighterState.BLOCK and randf() < 0.4 + 0.4 * skill:
+	if _target_state() == FighterState.BLOCK and randf() < 0.4 + 0.4 * skill:
 		_tap(InputFrame.Action.GRAB)
 		_attack_cooldown = 1.1
 		return
@@ -210,21 +216,38 @@ func _fight(distance: float) -> void:
 	_attack_cooldown = lerpf(0.42, 0.20, skill)
 
 
+## What the target appears to be doing. A decoy is doing nothing, which is
+## exactly right: the bot neither guards against it nor tries to grab its guard,
+## it just walks up and hits it -- and pops it.
+func _target_state() -> StringName:
+	if _target != null and _target.has_method(&"get_state_id"):
+		return _target.get_state_id()
+	return FighterState.IDLE
+
+
 func _reaction_time() -> float:
 	return lerpf(0.42, 0.10, skill)
 
 
-func _pick_target() -> Fighter:
-	var candidates: Array[Fighter] = []
+func _pick_target() -> Node3D:
+	var candidates: Array[Node3D] = []
 	for node in fighter.get_tree().get_nodes_in_group(&"fighters"):
 		var other := node as Fighter
 		if _is_valid(other) and other != fighter:
 			candidates.append(other)
+	# Decoys are considered alongside the real thing, which is the only way an
+	# afterimage can fool anybody who is not a person.
+	for node in fighter.get_tree().get_nodes_in_group(&"afterimages"):
+		var decoy := node as Afterimage
+		if decoy != null and is_instance_valid(decoy) and decoy.owner_fighter != fighter:
+			candidates.append(decoy)
 	if candidates.is_empty():
 		return null
 
 	var crowd := _crowd_centre(candidates)
-	var best: Fighter = null
+	# Node3D, not Fighter: a decoy that could be scored but never stored is a
+	# decoy nobody is ever fooled by.
+	var best: Node3D = null
 	var best_score := INF
 	for other in candidates:
 		var score := fighter.global_position.distance_to(other.global_position) \
@@ -238,15 +261,26 @@ func _pick_target() -> Fighter:
 ## Where the fight is: the centre of everybody except this bot. Counting itself
 ## would drag the centre toward wherever it had already wandered, which is
 ## exactly the drift the pull exists to correct.
-func _crowd_centre(candidates: Array[Fighter]) -> Vector3:
+func _crowd_centre(candidates: Array[Node3D]) -> Vector3:
 	var sum := Vector3.ZERO
 	for other in candidates:
 		sum += other.global_position
 	return sum / float(candidates.size())
 
 
-func _is_valid(other: Fighter) -> bool:
-	return other != null and is_instance_valid(other) and not other.is_eliminated
+## True for anything still worth walking at. Reads is_eliminated off the node
+## rather than typing the parameter, so a decoy -- which has no such property --
+## counts as present for as long as it exists.
+##
+## Compared against true rather than cast: Object.get returns null for a
+## property that does not exist, and bool(null) is a runtime error in GDScript.
+## It type-checks, it imports clean, and it fails at runtime into the function's
+## default -- which is false, so every decoy read as "not there" and the bot
+## stood still staring at one.
+func _is_valid(other: Node3D) -> bool:
+	if other == null or not is_instance_valid(other):
+		return false
+	return other.get(&"is_eliminated") != true
 
 
 func _tap(action: InputFrame.Action) -> void:

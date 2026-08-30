@@ -31,6 +31,7 @@ func _run() -> void:
 	_section("Getting around the arena")
 	await _test_a_bot_gets_round_an_obstacle()
 	await _test_a_bot_goes_where_the_fight_is()
+	await _test_a_bot_falls_for_an_afterimage()
 
 	_section("Leaving the bench")
 	await _test_a_bot_can_be_removed()
@@ -250,6 +251,55 @@ func _test_a_bot_goes_where_the_fight_is() -> void:
 	bot.crowd_pull = 0.0
 	_check(bot._pick_target() == lone, "with the pull off it takes the nearest instead")
 	bot.crowd_pull = BotInputSource.DEFAULT_CROWD_PULL
+
+
+## A decoy that only fooled humans would be half a power. The bot has no eyes
+## to deceive, so the deception has to exist where it does its deciding: a
+## decoy is a legitimate thing to be walking at, and popping one is the price.
+func _test_a_bot_falls_for_an_afterimage() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	var slot := PlayerManager.add_bot(0.5)
+	await _ticks(3)
+	var bot := _bot(0)
+	var fighter := _bot_fighter(0)
+
+	# Human well away; a decoy right next to the bot.
+	_human.global_position = Vector3(-10.0, 0.3, 10.0)
+	fighter.global_position = Vector3(6.0, 0.3, 6.0)
+	await _ticks(2)
+
+	var decoy: Afterimage = preload("res://scenes/effects/afterimage.tscn").instantiate()
+	# Long enough that it cannot expire on its own inside this test: an
+	# afterimage that simply ran out of time would leave every check below
+	# passing without the bot having done anything at all.
+	decoy.lifetime_ticks = 900
+	_main.get_node("Arena").interactable_root().add_child(decoy)
+	decoy.global_position = Vector3(8.0, 0.3, 6.0)
+	decoy.setup(_human, Color.CYAN)
+	await _ticks(4)
+
+	_check(bot._pick_target() == decoy,
+		"the bot picks the decoy over a distant real fighter")
+
+	# And swinging at it pops it, which is the whole cost. Put it in arm's reach
+	# and hold it there: how long the bot takes to WALK somewhere depends on its
+	# strafing rolls and on whatever scenery it detours around, and this check is
+	# about what it does when it arrives, not how long it takes to get there.
+	var health_before := fighter.health
+	var popped := false
+	for i in 600:
+		if is_instance_valid(decoy):
+			decoy.global_position = fighter.global_position \
+				+ fighter.get_facing_direction() * 1.1
+		await get_tree().physics_frame
+		if not is_instance_valid(decoy):
+			popped = true
+			break
+	_check(popped, "it walks up and pops it")
+	_check(fighter.health < health_before,
+		"and eats the burst for doing so (%.1f -> %.1f)" % [health_before, fighter.health])
+	await _ticks(30)
 
 
 # --- Leaving the bench ---

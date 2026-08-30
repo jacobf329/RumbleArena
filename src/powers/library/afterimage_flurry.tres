@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AfterimageFlurry" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/powers/afterimage_flurry.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/effects/afterimage.tscn" id="2_decoy"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Afterimage Flurry"
+ticks_startup = 6
+ticks_active = 5
+ticks_recovery = 20
+damage = 8.0
+knockback = 7.0
+launch_angle = 18.0
+ticks_hitstun = 26
+ticks_hitstop = 6
+power_gain = 0.0
+step_forward = 0.0
+hitbox_size = Vector3(1.4, 1.5, 2.6)
+hitbox_offset = Vector3(0, 1.0, -1.1)
+animation = &"double_kick"
+animation_start = 0.2
+animation_impact = 0.55
+animation_end = 1.2
+cancel_window_start = 40
+cancel_requires_hit = true
+power_cost = 32.0
+cooldown_seconds = 5.5
+decoy_scene = ExtResource("2_decoy")
+dash_distance = 4.2
+dash_clearance = 0.9

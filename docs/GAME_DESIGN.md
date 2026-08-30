@@ -126,15 +126,27 @@ The slice matchup is deliberately lopsided in *style*: an unkillable slow bruise
 versus a fragile arena-manipulator. If those two are fun against each other, the
 combat core is sound.
 
-### Remaining roster (full scope, designed but not built)
+### Built since
+
+| Name | Concept | Standout stat | Signature | Ultimate |
+|---|---|---|---|---|
+| **Jinsoku** | Super speed | SPD 5 | Afterimage Flurry — dash through, leave a decoy | Hundred Steps — move and attack far faster |
+| **Yamabuki** | Grappling / traversal | AGI 5 | Grapple Line — a ride to the nearest high ground | Dragnet — haul the whole arena to her feet |
+
+Yamabuki's line was designed here as "grapple to any climbable surface" and
+built against the arena's *geometry* instead. Keying it to Climbable nodes
+would have made the power a property of how a level happened to be decorated —
+the Proving Ground has one climbable wall, so AGILITY 5 would have had exactly
+one place in the level to use its own verb. Anything she could stand on is a
+valid anchor, which makes the power a reading of the room.
+
+### Remaining roster (designed but not built)
 
 | Name | Concept | Standout stat | Signature power |
 |---|---|---|---|
-| **Jinsoku** | Super speed | SPD 5 | Afterimage Flurry — attack, leave a decoy |
 | **Shirayuki** | Telekinesis | FOC 5 | Pull/throw objects and players at range |
 | **Kagerou** | Shadow / invisibility | AGI 5 | Fade — invisible while not attacking |
 | **Raiden-Maru** | Lightning | FOC 4, SPD 4 | Chain arc between grounded fighters |
-| **Yamabuki** | Grappling / traversal | AGI 5, SPD 4 | Grapple line to any climbable surface |
 | **Mokushi** | Regenerating tank | TGH 5, STR 4 | Second Wind — revive once per stock |
 
 ---

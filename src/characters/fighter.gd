@@ -105,6 +105,17 @@ var _power_cooldowns: Dictionary = {}
 var _rampage_ticks := 0
 var _rampage_armour := 0.0
 var _rampage_bonus := 0.0
+## Ticks of velocity a power imparted on purpose, which the damping systems must
+## not fight. Every system that touches horizontal velocity exists to stop a
+## fighter drifting -- attack drift, hitstun drag, air control settling toward
+## zero -- and all three are correct right up until something deliberately threw
+## you somewhere, at which point they quietly delete the move. A grapple arc
+## dies in two ticks to attack drift, and a haul across the arena dies to
+## hitstun drag. One flag, checked in all three places.
+var _launch_ticks := 0
+var _haste_ticks := 0
+var _haste_speed := 0.0
+var _haste_attack := 0.0
 ## Attacks entered, however they started. Observational.
 var attacks_started: int = 0
 var _attack_pressed_this_tick := false
@@ -279,7 +290,10 @@ func _probe_for_interactable() -> Interactable:
 ## Carrying something heavy slows you down; that is the cost that makes picking
 ## a pillar up a decision rather than a free upgrade.
 func _speed_multiplier() -> float:
-	return Liftable.CARRY_SPEED_PENALTY if carried != null else 1.0
+	var scale := Liftable.CARRY_SPEED_PENALTY if carried != null else 1.0
+	# Multiplied through the carry penalty rather than replacing it, so hasting
+	# with a pillar on your shoulder is fast-for-a-carrier, not free carrying.
+	return scale * (1.0 + _haste_speed) if is_hasted() else scale
 
 
 func _update_prompt() -> void:
@@ -338,6 +352,8 @@ func _update_timers(delta: float) -> void:
 	_capture_buffered_presses()
 	_decay_attack_buffer()
 	_rampage_ticks = maxi(_rampage_ticks - 1, 0)
+	_haste_ticks = maxi(_haste_ticks - 1, 0)
+	_launch_ticks = maxi(_launch_ticks - 1, 0)
 	for key in _power_cooldowns:
 		_power_cooldowns[key] = maxf(_power_cooldowns[key] - delta, 0.0)
 	_regenerate_stamina(delta)
@@ -480,6 +496,10 @@ func apply_ground_friction(delta: float) -> void:
 
 
 func apply_air_acceleration(direction: Vector3, delta: float) -> void:
+	# Steering mid-launch is fine; settling back to a standstill is not, and
+	# with no stick input that is exactly what this would do.
+	if is_launched() and direction == Vector3.ZERO:
+		return
 	var target := direction * character_def.get_max_speed() \
 		* get_move_strength() * _speed_multiplier()
 	var rate := character_def.get_acceleration() * character_def.get_air_control() * delta
@@ -488,13 +508,28 @@ func apply_air_acceleration(direction: Vector3, delta: float) -> void:
 
 
 ## An attack takes your footing away. Committing is the whole point of a heavy.
+## Velocity a power meant. Protected from damping for `ticks` so the throw
+## actually goes where it was aimed.
+func apply_launch(launch_velocity: Vector3, ticks: int) -> void:
+	velocity = launch_velocity
+	_launch_ticks = maxi(_launch_ticks, ticks)
+
+
+func is_launched() -> bool:
+	return _launch_ticks > 0
+
+
 func apply_attack_drift(delta: float) -> void:
+	if is_launched():
+		return
 	var rate := ATTACK_DRIFT_DRAG * delta
 	velocity.x = move_toward(velocity.x, 0.0, rate)
 	velocity.z = move_toward(velocity.z, 0.0, rate)
 
 
 func apply_hitstun_drag(delta: float) -> void:
+	if is_launched():
+		return
 	var rate := HITSTUN_DRAG * delta
 	velocity.x = move_toward(velocity.x, 0.0, rate)
 	velocity.z = move_toward(velocity.z, 0.0, rate)
@@ -633,6 +668,25 @@ func apply_rampage(ticks: int, armour: float, bonus: float) -> void:
 
 func is_rampaging() -> bool:
 	return _rampage_ticks > 0
+
+
+## Hundred Steps: faster on her feet and faster with her hands, for a while.
+func apply_haste(ticks: int, speed_bonus: float, attack_bonus: float) -> void:
+	_haste_ticks = maxi(_haste_ticks, ticks)
+	_haste_speed = speed_bonus
+	_haste_attack = attack_bonus
+
+
+func is_hasted() -> bool:
+	return _haste_ticks > 0
+
+
+## The attack timing scale the state machine actually uses. Lives here rather
+## than on CharacterDef because haste is a state of this fighter right now, not
+## a property of the character they picked.
+func get_attack_speed_scale() -> float:
+	var scale := character_def.get_attack_speed_scale()
+	return scale * (1.0 - _haste_attack) if is_hasted() else scale
 
 
 ## Called from AttackState once the cancel window is open. `connected` gates the
@@ -1083,6 +1137,8 @@ func respawn() -> void:
 	strike_scale = 1.0
 	_pending_on_beat = false
 	_rampage_ticks = 0
+	_haste_ticks = 0
+	_launch_ticks = 0
 	# A fresh life should not inherit the last one's cooldowns.
 	_power_cooldowns.clear()
 	if slot != null and slot.source != null:
@@ -1153,5 +1209,14 @@ func get_debug_line() -> String:
 		power,
 		stamina,
 		flow,
-		"  RAMPAGE" if is_rampaging() else "",
+		_status_suffix(),
 	]
+
+
+func _status_suffix() -> String:
+	var flags: Array[String] = []
+	if is_rampaging():
+		flags.append("RAMPAGE")
+	if is_hasted():
+		flags.append("HASTE")
+	return ("  " + " ".join(flags)) if not flags.is_empty() else ""

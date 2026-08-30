@@ -8,6 +8,7 @@ extends Node3D
 
 const ANIMATIONS := preload("res://assets/characters/ninja/ninja_animations.res")
 const HUE_SHADER := preload("res://assets/characters/ninja/ninja_hue.gdshader")
+const GHOST_SHADER := preload("res://assets/characters/ninja/ninja_ghost.gdshader")
 
 const LIBRARY := &"ninja"
 ## Hue of the crimson in the source texture, measured from the atlas.
@@ -23,6 +24,13 @@ const RECOIL_RECOVERY := 2.4
 const IDLE_SPEED := 0.35
 ## Speed at which the walk gives way to the run.
 const WALK_SPEED := 4.2
+
+## Set in the scene by the afterimage, which is the same model wearing the
+## ghost shader. Keeping the switch here means a decoy is a FighterVisual like
+## any other and inherits the recolour, the animation library and the scale --
+## a decoy that drifted out of sync with the fighter it copies would be worse
+## than no decoy at all.
+@export var ghost: bool = false
 
 @onready var _model: Node3D = $Model
 @onready var _player: AnimationPlayer = $Model/AnimationPlayer
@@ -51,7 +59,7 @@ func _build_material() -> void:
 
 	var source := mesh_instance.mesh.surface_get_material(0) as BaseMaterial3D
 	_material = ShaderMaterial.new()
-	_material.shader = HUE_SHADER
+	_material.shader = GHOST_SHADER if ghost else HUE_SHADER
 	if source != null and source.albedo_texture != null:
 		_material.set_shader_parameter("albedo_texture", source.albedo_texture)
 	mesh_instance.material_override = _material
@@ -60,8 +68,19 @@ func _build_material() -> void:
 func set_player_colour(colour: Color) -> void:
 	if _material == null:
 		return
+	if ghost:
+		# A decoy is drawn flat in the slot colour rather than hue-rotated, so it
+		# takes the colour directly.
+		_material.set_shader_parameter("ghost_color", colour)
+		return
 	# Rotate the crimson onto the slot's hue; wrapping keeps the shortest way round.
 	_material.set_shader_parameter("hue_shift", wrapf(colour.h - SOURCE_HUE, -0.5, 0.5))
+
+
+## How solid the afterimage looks. No-op on a real fighter.
+func set_ghost_alpha(amount: float) -> void:
+	if _material != null and ghost:
+		_material.set_shader_parameter("ghost_alpha", clampf(amount, 0.0, 1.0))
 
 
 func set_hit_flash(amount: float) -> void:
