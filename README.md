@@ -50,11 +50,13 @@ least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
    installer to run.
 2. **Get this branch:** `git clone` the repo and `git checkout claude/godot-ninja-game-96kjrj`,
    or pull if you already have it.
-3. **Double-click a launcher** in the project folder:
-   - Windows → `Play RumbleArena.bat`
-   - macOS → `Play RumbleArena.command` (first time: right-click → Open, to get
-     past Gatekeeper)
-   - Linux → `play.sh`
+3. **Put a shortcut on your Desktop** — run this once:
+   - Windows → `Create Desktop Shortcut.bat`
+   - macOS / Linux → `./create_desktop_shortcut.sh`
+
+   After that, launch the game from the Desktop icon. You can also skip the
+   shortcut and double-click the launcher in the project folder directly
+   (`Play RumbleArena.bat`, `Play RumbleArena.command`, or `play.sh`).
 
 The launcher looks for Godot on your PATH, beside the project, in the usual
 install folders, and in Downloads. If it cannot find it, create a file called
@@ -70,18 +72,39 @@ Press **A** on a gamepad or **Space** on the keyboard to take a seat; up to four
 can join at any time, and a pad can be unplugged and plugged back in without
 losing its fighter.
 
+**If your controller does nothing**, look at the `Gamepads:` line in the
+top-left. It names every pad the engine can see. If yours is plugged in and does
+not appear there, the problem is the driver or the cable rather than the game —
+try a different USB port, or pair it again. A pad shown as `[no mapping]` is one
+Godot has no layout for; it will still work but the buttons may be in odd
+places.
+
 Each seat gets a different stat block, so the movement asymmetry is apparent
 immediately: Kurogane is heavy and cannot double jump at all, Jinsoku is quick,
 Yamabuki jumps highest.
 
+The gamepad is the primary interface; the keyboard is there so one player can
+test alone.
+
 | | Gamepad | Keyboard |
 |---|---|---|
-| Move | Left stick | WASD |
+| Move | Left stick or d-pad | WASD |
 | Jump | A (hold for height) | Space |
-| Dash | Left trigger | Shift |
+| Dodge | Left trigger | Shift |
 | Light / Heavy / Launcher | X / Y / RB | J / K / L |
-| Grab / Block | B / LB | U / Ctrl |
-| Interact / Signature / Ultimate | D-pad up / RT / D-pad down | E / Q / R |
+| Grab & Interact | B | U / E |
+| Block | LB | Ctrl |
+| Signature | Right trigger | Q |
+| Ultimate | Right stick click | R |
+
+Ten actions have to fit somewhere and only eight positions are genuinely good —
+four face buttons, two bumpers, two triggers — so the eight used constantly live
+there. Grab and interact share **B** because both mean "engage with what is in
+front of me", which keeps the d-pad free for movement. Only the ultimate, used
+once or twice a match, sits somewhere deliberately awkward.
+
+Landing and taking hits **rumbles the pad**, scaled by damage; on-beat hits buzz
+harder and longer.
 
 F5 returns everyone to their spawn.
 

@@ -14,8 +14,8 @@ func poll() -> void:
 	frame.begin_frame()
 	if is_device_connected():
 		_read(frame)
-	else:
-		frame.clear()
+	# Otherwise the frame stays as begin_frame() left it: nothing held, previous
+	# state intact, so a release edge still fires for whatever was down.
 
 
 ## Override to fill the frame from the device.
@@ -39,3 +39,12 @@ func is_device_connected() -> bool:
 ## does not hand the same pad to two slots.
 func owns_device(device_id: int) -> bool:
 	return get_device_id() == device_id
+
+
+## Haptics. A no-op on devices that cannot buzz.
+func rumble(_weak: float, _strong: float, _duration: float) -> void:
+	pass
+
+
+func stop_rumble() -> void:
+	pass

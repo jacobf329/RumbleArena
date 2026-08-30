@@ -84,6 +84,9 @@ label_settings = SubResource("LabelSettings_hint")
 [node name="Players" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
 label_settings = SubResource("LabelSettings_body")
 
+[node name="Devices" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
+label_settings = SubResource("LabelSettings_body")
+
 [node name="Controls" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
 label_settings = SubResource("LabelSettings_body")
 

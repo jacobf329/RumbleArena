@@ -623,6 +623,19 @@ func _spawn_feedback(result: HitResult) -> void:
 		var strength := clampf(result.damage / 26.0, 0.12, 1.0)
 		camera.add_shake(strength * (1.35 if result.on_beat else 1.0))
 
+	# Taking a hit buzzes hard and long; landing one is a short confirming tap.
+	# On a controller-first game this carries as much of the impact as the shake.
+	var felt := clampf(result.damage / 24.0, 0.18, 1.0)
+	_rumble(felt * 0.65, felt, 0.30 if result.on_beat else 0.22)
+	var attacker_fighter := result.attacker as Fighter
+	if attacker_fighter != null and attacker_fighter != self:
+		attacker_fighter._rumble(felt * 0.35, felt * 0.5, 0.10)
+
+
+func _rumble(weak: float, strong: float, duration: float) -> void:
+	if slot != null and slot.source != null:
+		slot.source.rumble(weak, strong, duration)
+
 
 ## Freezes both fighters for a moment on connect. With no animation to sell the
 ## hit, this and the knockback are where the impact actually comes from.
@@ -737,6 +750,8 @@ func respawn() -> void:
 	flow = 0
 	strike_scale = 1.0
 	_pending_on_beat = false
+	if slot != null and slot.source != null:
+		slot.source.stop_rumble()
 	# Drop queued intent as well as state: a fighter should not come back and
 	# immediately act on a button pressed before it went down.
 	_clear_attack_buffer()

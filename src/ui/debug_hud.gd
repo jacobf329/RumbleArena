@@ -12,6 +12,7 @@ const PLAYER_METER := preload("res://scenes/ui/player_meter.tscn")
 @onready var _join_label: Label = $Margin/Rows/JoinHint
 @onready var _players_label: Label = $Margin/Rows/Players
 @onready var _controls_label: Label = $Margin/Rows/Controls
+@onready var _devices_label: Label = $Margin/Rows/Devices
 
 var fighters: Array[Fighter] = []
 
@@ -35,6 +36,8 @@ func _process(_delta: float) -> void:
 		JOIN_HINT, free_seats, "" if free_seats == 1 else "s"
 	] if free_seats > 0 else "All four seats filled."
 
+	_devices_label.text = _devices_text()
+
 	var lines: Array[String] = []
 	for slot: PlayerSlot in PlayerManager.slots:
 		if not slot.is_active():
@@ -53,6 +56,24 @@ func _fighter_line(slot: PlayerSlot) -> String:
 	return "%s  --  joined (%s)" % [slot.get_label(), slot.source.get_display_name()]
 
 
+## Names every pad the engine can see. If a controller is plugged in and does
+## not appear here, the problem is the driver or the cable, not the game.
+func _devices_text() -> String:
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		return "Gamepads: none detected  (keyboard still works: press SPACE)"
+
+	var described: Array[String] = []
+	for device: int in pads:
+		var name := Input.get_joy_name(device)
+		described.append("%d: %s%s" % [
+			device,
+			name if name != "" else "unknown pad",
+			"" if Input.is_joy_known(device) else " [no mapping]",
+		])
+	return "Gamepads: %d  -  %s" % [pads.size(), ", ".join(described)]
+
+
 func _controls_text() -> String:
-	return "Gamepad: stick move | A jump | LT dash | X light | Y heavy | RB launcher | B grab | LB block\n" \
-		+ "Keyboard: WASD move | SPACE jump | SHIFT dash | J light | K heavy | L launcher | U grab | CTRL block"
+	return "Gamepad: stick/d-pad move | A jump | LT dodge | X light | Y heavy | RB launcher | B grab | LB block | RT signature | R3 ultimate\n" \
+		+ "Keyboard: WASD move | SPACE jump | SHIFT dodge | J light | K heavy | L launcher | U grab | CTRL block | Q signature | R ultimate"

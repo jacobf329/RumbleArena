@@ -38,6 +38,7 @@ func _run() -> void:
 
 	_section("Real device input")
 	_test_every_action_is_bound()
+	await _test_gamepad_reads_its_device()
 	await _test_keyboard_drives_a_fighter()
 
 
@@ -309,6 +310,94 @@ func _test_every_action_is_bound() -> void:
 		_check(GamepadInputSource.BUTTON_BINDINGS.has(action)
 				or GamepadInputSource.TRIGGER_BINDINGS.has(action),
 			"gamepad binds %s" % name)
+
+
+## The gamepad is the primary interface, so its mapping gets checked against
+## simulated device events rather than trusted. A pad cannot be faked into
+## Input.get_connected_joypads() headlessly, so the source is read directly --
+## which is the part that carries the mapping, the deadzone and the d-pad.
+func _test_gamepad_reads_its_device() -> void:
+	const DEVICE := 0
+	var pad := GamepadInputSource.new(DEVICE)
+
+	for pair: Array in [
+		[JOY_BUTTON_A, InputFrame.Action.JUMP, "A jumps"],
+		[JOY_BUTTON_X, InputFrame.Action.LIGHT, "X is light"],
+		[JOY_BUTTON_Y, InputFrame.Action.HEAVY, "Y is heavy"],
+		[JOY_BUTTON_B, InputFrame.Action.GRAB, "B grabs"],
+		[JOY_BUTTON_B, InputFrame.Action.INTERACT, "B also interacts"],
+		[JOY_BUTTON_LEFT_SHOULDER, InputFrame.Action.BLOCK, "LB blocks"],
+		[JOY_BUTTON_RIGHT_SHOULDER, InputFrame.Action.LAUNCHER, "RB launches"],
+		[JOY_BUTTON_RIGHT_STICK, InputFrame.Action.ULTIMATE, "R3 is the ultimate"],
+	]:
+		await _hold_pad_button(DEVICE, pair[0])
+		var frame := _read_pad(pad)
+		_check(frame.is_held(pair[1]), pair[2])
+		await _release_pad_button(DEVICE, pair[0])
+
+	# Join uses the same A that jumps, so a pad claims a seat with the button a
+	# player will already be pressing.
+	await _hold_pad_button(DEVICE, JOY_BUTTON_A)
+	_check(GamepadInputSource.is_join_requested(DEVICE), "A claims a free seat")
+	await _release_pad_button(DEVICE, JOY_BUTTON_A)
+
+	await _move_pad_axis(DEVICE, JOY_AXIS_LEFT_X, 0.9)
+	var pushed := _read_pad(pad)
+	_check(pushed.move.x > 0.5, "pushing the stick right moves right (%.2f)" % pushed.move.x)
+
+	await _move_pad_axis(DEVICE, JOY_AXIS_LEFT_X, 0.1)
+	var drift := _read_pad(pad)
+	_check(drift.move == Vector2.ZERO, "stick drift inside the deadzone is ignored")
+	await _move_pad_axis(DEVICE, JOY_AXIS_LEFT_X, 0.0)
+
+	# Godot reports stick up as negative; the frame's convention is up-positive.
+	await _move_pad_axis(DEVICE, JOY_AXIS_LEFT_Y, -0.9)
+	var forward := _read_pad(pad)
+	_check(forward.move.y > 0.5, "stick up reads as forward (%.2f)" % forward.move.y)
+	await _move_pad_axis(DEVICE, JOY_AXIS_LEFT_Y, 0.0)
+
+	await _hold_pad_button(DEVICE, JOY_BUTTON_DPAD_LEFT)
+	var dpad := _read_pad(pad)
+	_check(dpad.move.x < -0.5, "the d-pad moves too (%.2f)" % dpad.move.x)
+	await _release_pad_button(DEVICE, JOY_BUTTON_DPAD_LEFT)
+
+	await _move_pad_axis(DEVICE, JOY_AXIS_TRIGGER_LEFT, 0.9)
+	var trigger := _read_pad(pad)
+	_check(trigger.is_held(InputFrame.Action.DODGE), "the left trigger dodges")
+	await _move_pad_axis(DEVICE, JOY_AXIS_TRIGGER_LEFT, 0.0)
+
+
+func _read_pad(pad: GamepadInputSource) -> InputFrame:
+	pad.frame.begin_frame()
+	pad._read(pad.frame)
+	return pad.frame
+
+
+func _hold_pad_button(device: int, button: JoyButton) -> void:
+	var event := InputEventJoypadButton.new()
+	event.device = device
+	event.button_index = button
+	event.pressed = true
+	Input.parse_input_event(event)
+	await get_tree().physics_frame
+
+
+func _release_pad_button(device: int, button: JoyButton) -> void:
+	var event := InputEventJoypadButton.new()
+	event.device = device
+	event.button_index = button
+	event.pressed = false
+	Input.parse_input_event(event)
+	await get_tree().physics_frame
+
+
+func _move_pad_axis(device: int, axis: JoyAxis, value: float) -> void:
+	var event := InputEventJoypadMotion.new()
+	event.device = device
+	event.axis = axis
+	event.axis_value = value
+	Input.parse_input_event(event)
+	await get_tree().physics_frame
 
 
 ## Presses real keys through the input singleton and follows them all the way
