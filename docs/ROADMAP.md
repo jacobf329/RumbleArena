@@ -250,7 +250,26 @@ stat spread worth playing rather than merely worth reading.
 - [x] Kurogane: Seismic Palm, Ogre Rampage
 - [x] Null: Blink Strike, System Seize
 - [ ] Arena "The Server Shrine" built to spec (§6 of the GDD)
-- [ ] Character select with join/ready flow
+- [x] Character select with join/ready flow
+
+### Character select
+
+There is no separate menu scene. Players are already standing in the arena
+warming up, so they pick there: **left and right cycle the roster, jump locks
+in** -- the same button that got them a seat, which is the one they already have
+a finger on. A match starts only once *everyone who has joined* is ready, and a
+late join puts the countdown back to choosing rather than dropping somebody into
+a fight mid-decision.
+
+- **Seats default to different ninjas**, so a group that just mashes A still
+  gets the asymmetry the game is about without touching select.
+- **Swapping is done in place**, not by respawning the fighter. Respawning would
+  mean re-registering with the camera, the HUD and the match for what is really
+  just a different stat block.
+- **Cycling is on the bumpers, not the movement stick.** The first version read
+  left and right off the stick, which meant a player changed ninja every time
+  they took a step while warming up. Six tests caught it at once, all of them
+  failing because moving a fighter had quietly swapped who it was.
 
 ### Powers
 

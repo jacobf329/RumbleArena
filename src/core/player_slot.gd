@@ -7,10 +7,17 @@ var source: InputSource = null
 var fighter: Node3D = null
 var color: Color = Color.WHITE
 
+## Which character this seat has picked, and whether they have locked it in.
+## Defaults to the seat's own number so a player who never touches select still
+## gets somebody, and four players still get four different ninjas.
+var character_index: int = 0
+var is_ready: bool = false
+
 
 func _init(slot_index: int, slot_color: Color) -> void:
 	index = slot_index
 	color = slot_color
+	character_index = slot_index
 
 
 func is_active() -> bool:

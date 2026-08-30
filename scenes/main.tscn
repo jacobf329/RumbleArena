@@ -1,10 +1,11 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://src/core/proving_ground.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/arenas/proving_ground.tscn" id="2_arena"]
 [ext_resource type="Script" path="res://src/camera/arena_camera.gd" id="3_camera"]
 [ext_resource type="Script" path="res://src/ui/debug_hud.gd" id="4_hud"]
 [ext_resource type="Script" path="res://src/core/match_manager.gd" id="5_match"]
+[ext_resource type="Script" path="res://src/core/character_select.gd" id="6_select"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_main"]
 sky_top_color = Color(0.1, 0.12, 0.2, 1)
@@ -61,6 +62,10 @@ shadow_enabled = true
 
 [node name="Match" type="Node" parent="."]
 script = ExtResource("5_match")
+
+[node name="CharacterSelect" type="Node" parent="."]
+script = ExtResource("6_select")
+match_path = NodePath("../Match")
 
 [node name="Fighters" type="Node3D" parent="."]
 

@@ -15,6 +15,7 @@ var _checks := 0
 var _main: Node3D
 var _camera: ArenaCamera
 var match_manager: MatchManager
+var character_select: CharacterSelect
 
 
 func _ready() -> void:
@@ -26,6 +27,8 @@ func _ready() -> void:
 	# Suites that are not about match flow opt out of it; the M4 suite turns it
 	# back on explicitly.
 	match_manager.auto_start = false
+	character_select = _main.get_node("CharacterSelect")
+	character_select.enabled = false
 	PlayerManager.join_enabled = false
 	await _run()
 	_report()

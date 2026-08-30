@@ -7,15 +7,6 @@
 ## flow (M4) will replace.
 extends Node3D
 
-## Four contrasting stat blocks, so the movement asymmetry of pillar P1 is
-## visible from the very first playtest rather than only after powers exist.
-const ROSTER: Array[String] = [
-	"res://src/characters/roster/kurogane.tres",
-	"res://src/characters/roster/null.tres",
-	"res://src/characters/roster/jinsoku.tres",
-	"res://src/characters/roster/yamabuki.tres",
-]
-
 const FIGHTER_SCENE := preload("res://scenes/fighter.tscn")
 
 @onready var _arena: Arena = $Arena
@@ -23,6 +14,7 @@ const FIGHTER_SCENE := preload("res://scenes/fighter.tscn")
 @onready var _fighter_root: Node3D = $Fighters
 @onready var _hud: Control = $HUD/DebugHUD
 @onready var _match: MatchManager = $Match
+@onready var _select: CharacterSelect = $CharacterSelect
 
 var _fighters: Array[Fighter] = []
 
@@ -32,13 +24,14 @@ func _ready() -> void:
 	_camera.reset_focus()
 
 	_hud.bind_match(_match)
+	_select.character_changed.connect(_on_character_changed)
 
 	PlayerManager.player_joined.connect(_on_player_joined)
 	PlayerManager.join_enabled = true
 
 
 func _on_player_joined(slot: PlayerSlot) -> void:
-	var definition: CharacterDef = load(ROSTER[slot.index % ROSTER.size()])
+	var definition := CharacterRoster.at(slot.character_index)
 	var spawn := _arena.get_spawn_point(slot.index)
 
 	var fighter: Fighter = FIGHTER_SCENE.instantiate()
@@ -51,6 +44,20 @@ func _on_player_joined(slot: PlayerSlot) -> void:
 	_match.register(fighter)
 	_hud.fighters = _fighters
 	_hud.add_meter(fighter)
+
+
+func _on_character_changed(slot: PlayerSlot) -> void:
+	var fighter := slot.fighter as Fighter
+	if fighter != null:
+		fighter.set_character(CharacterRoster.at(slot.character_index))
+
+
+func _process(_delta: float) -> void:
+	# Character select owns the prompt above each fighter until the bell.
+	for slot: PlayerSlot in PlayerManager.get_active_slots():
+		var fighter := slot.fighter as Fighter
+		if fighter != null:
+			fighter.select_prompt = _select.prompt_for(slot)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

@@ -65,6 +65,10 @@ var pending_hitstun: int = 0
 ## never removes itself.
 var is_eliminated := false
 
+## Set by character select before the bell; takes precedence over the
+## interaction prompt, which is not relevant until the match starts.
+var select_prompt: String = ""
+
 var carried: Liftable = null
 var interaction_target: Interactable = null
 ## The wall this fighter is currently on, if any.
@@ -281,7 +285,11 @@ func _speed_multiplier() -> float:
 func _update_prompt() -> void:
 	if _prompt == null:
 		return
-	if carried != null:
+	if select_prompt != "":
+		_prompt.text = select_prompt
+		_prompt.modulate = Color(1, 1, 1) if select_prompt.begins_with("READY") \
+			else Color(0.86, 0.9, 1.0)
+	elif carried != null:
 		_prompt.text = "Throw %s" % carried.display_name
 		_prompt.modulate = Color(0.85, 0.95, 1.0)
 	elif interaction_target != null:
@@ -1012,6 +1020,23 @@ func set_downed(downed: bool) -> void:
 
 
 # --- Match plumbing ---
+
+## Swaps which ninja this seat is playing, in place. Respawning the node instead
+## would mean re-registering with the camera, the HUD and the match for what is
+## really just a different stat block.
+func set_character(definition: CharacterDef) -> void:
+	character_def = definition
+	move_set = definition.move_set if definition.move_set != null else DEFAULT_MOVE_SET
+	max_health = definition.get_max_health()
+	max_power = definition.get_max_power()
+	max_stamina = definition.get_max_stamina()
+	health = max_health
+	power = 0.0
+	stamina = max_stamina
+	_air_jumps_left = definition.get_extra_jumps()
+	_power_cooldowns.clear()
+	_apply_presentation()
+
 
 ## Call this before adding the fighter to the tree -- _ready() consumes the
 ## definition to build the state machine and the coloured presentation.

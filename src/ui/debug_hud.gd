@@ -136,4 +136,5 @@ func _devices_text() -> String:
 func _controls_text() -> String:
 	return "Gamepad: stick/d-pad move | A jump | LT dodge | X light | Y heavy | RB launcher | B grab | LB block | RT signature | R3 ultimate\n" \
 		+ "Keyboard: WASD move | SPACE jump | SHIFT dodge | J light | K heavy | L launcher | U grab | CTRL block | Q signature | R ultimate\n" \
+		+ "Before the bell: [LB]/[RB] pick your ninja, [A] to lock in.\n" \
 		+ "Light three times = punch, punch, KICK -- the kick throws a fireball if the blue meter can pay for it. Grab beats block."

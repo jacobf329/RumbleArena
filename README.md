@@ -13,10 +13,10 @@ lift, climb, break, or hack is gated by your character's stats.
 stocks each, elimination and a winner. Combat is punch-punch-kick chains ending
 in a fireball, heavy and launcher confirms, grabs that beat a guard, blocking,
 dodging, juggles, knockdowns and wall splats, with timing-based rhythm bonuses.
-Kurogane and Null have their named powers on the signature and ultimate
-buttons. The arena is stat-gated: Kurogane rips out concrete pillars and throws
+Pick your ninja in the arena before the bell, and Kurogane and Null have their
+named powers on the signature and ultimate buttons. The arena is stat-gated: Kurogane rips out concrete pillars and throws
 them, Null hacks the ceiling turrets, Yamabuki climbs the comms tower, and each
-is refused what the others can do. Character select and a second arena are what
+is refused what the others can do. A second arena and the rest of the roster's powers are what
 remain. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 The same pillar, offered to the fighter who qualifies and refused — with the
@@ -143,6 +143,12 @@ of a move that actually connected, so whiffing a heavy costs you the full
 recovery. **Grab beats block, block beats strike, strike beats grab**; a whiffed
 grab has the longest recovery of any move. Dodge has invulnerability frames and
 costs stamina. Knocking someone into a wall splats them and hands you a juggle.
+
+**Choosing a ninja** happens in the arena, before the bell: the **bumpers**
+cycle the roster, **jump** locks in. The match starts once everyone who has
+joined is ready, and someone joining late puts it back to choosing rather than
+dropping them into a fight mid-decision. If nobody touches it, the four seats
+still get four different ninjas.
 
 **Powers** cost meter and go on cooldown, and are charged when you commit — a
 whiffed special still costs you.

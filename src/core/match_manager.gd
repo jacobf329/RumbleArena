@@ -90,15 +90,32 @@ func _process(delta: float) -> void:
 				_reset_to_waiting()
 
 
+## A match waits for everyone who has joined to lock in, not just for enough
+## bodies. Somebody still deciding should never be dropped into a countdown.
 func _evaluate_start() -> void:
 	if not auto_start:
 		_set_phase(Phase.WAITING)
 		return
-	if _fighters.size() < MIN_PLAYERS:
+	if _fighters.size() < MIN_PLAYERS or not _everyone_ready():
 		_set_phase(Phase.WAITING)
 		return
 	time_left = countdown_seconds
 	_set_phase(Phase.COUNTDOWN)
+
+
+func _everyone_ready() -> bool:
+	for index: int in _fighters:
+		var fighter := _fighters[index] as Fighter
+		if fighter.slot != null and not fighter.slot.is_ready:
+			return false
+	return true
+
+
+## Called by character select whenever somebody readies up or changes their
+## mind. Un-readying during a countdown puts the match back to waiting.
+func refresh_readiness() -> void:
+	if phase == Phase.WAITING or phase == Phase.COUNTDOWN:
+		_evaluate_start()
 
 
 func _begin_fight() -> void:
@@ -167,6 +184,10 @@ func _reset_to_waiting() -> void:
 		fighter.restore()
 		_stocks[index] = stocks_per_player
 	winner = null
+	for index: int in _fighters:
+		var fighter := _fighters[index] as Fighter
+		if fighter.slot != null:
+			fighter.slot.is_ready = false
 	_evaluate_start()
 
 

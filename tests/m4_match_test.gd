@@ -30,10 +30,16 @@ func _run() -> void:
 		_ended += 1
 		_last_winner = winner)
 
+	_section("Character select")
+	await _test_seats_default_to_different_ninjas()
+	await _test_cycling_changes_your_ninja()
+	await _test_cycling_wraps_both_ways()
+	await _test_locking_in_stops_you_cycling()
+
 	_section("Starting a match")
 	await _test_one_player_waits()
-	await _test_two_players_start_a_countdown()
-	await _test_a_late_join_restarts_the_countdown()
+	await _test_nobody_starts_until_everyone_is_ready()
+	await _test_a_late_join_sends_it_back_to_select()
 	await _test_the_countdown_becomes_a_fight()
 
 	_section("Stocks")
@@ -48,35 +54,93 @@ func _run() -> void:
 	await _test_victory_resets_for_a_rematch()
 
 
+# --- Character select ---
+
+## Four seats give four different ninjas without anyone touching select, so a
+## group that just mashes A still gets the asymmetry the game is about.
+func _test_seats_default_to_different_ninjas() -> void:
+	match_manager.auto_start = true
+	character_select.enabled = true
+	_kurogane = await _join(0)
+	_null = await _join(1)
+	await _ticks(6)
+
+	_check(_kurogane.character_def.display_name != _null.character_def.display_name,
+		"two seats start on different ninjas (%s, %s)"
+			% [_kurogane.character_def.display_name, _null.character_def.display_name])
+
+
+func _test_cycling_changes_your_ninja() -> void:
+	var before := _kurogane.character_def.display_name
+	await _cycle(_kurogane.slot, 1)
+
+	_check(_kurogane.character_def.display_name != before,
+		"pushing right picks the next ninja (%s -> %s)"
+			% [before, _kurogane.character_def.display_name])
+	_check(_kurogane.max_health == _kurogane.character_def.get_max_health(),
+		"and the swap actually re-derives their stats (%.0f health)" % _kurogane.max_health)
+
+
+func _test_cycling_wraps_both_ways() -> void:
+	var start := _kurogane.slot.character_index
+	for i in CharacterRoster.size():
+		await _cycle(_kurogane.slot, 1)
+	_check(_kurogane.slot.character_index == start,
+		"cycling all the way round comes home (%d)" % _kurogane.slot.character_index)
+
+	await _cycle(_kurogane.slot, -1)
+	_check(_kurogane.slot.character_index != start, "and it cycles the other way too")
+	await _cycle(_kurogane.slot, 1)
+
+
+func _test_locking_in_stops_you_cycling() -> void:
+	await _ready_up(_kurogane.slot)
+	_check(_kurogane.slot.is_ready, "the jump button locks a choice in")
+
+	var locked := _kurogane.slot.character_index
+	await _cycle(_kurogane.slot, 1)
+	_check(_kurogane.slot.character_index == locked,
+		"a locked-in player cannot keep cycling")
+
+	await _ready_up(_kurogane.slot)
+	_check(not _kurogane.slot.is_ready, "and can change their mind")
+
+
 # --- Starting a match ---
 
 func _test_one_player_waits() -> void:
-	match_manager.auto_start = true
-	_kurogane = await _join(0)
-	await _ticks(10)
-	_check(match_manager.phase == MatchManager.Phase.WAITING,
-		"one player is not a match (%s)" % match_manager.phase_name())
-
-
-func _test_two_players_start_a_countdown() -> void:
-	_null = await _join(1)
+	await _ready_up(_kurogane.slot)
+	_null.slot.is_ready = false
+	match_manager.refresh_readiness()
 	await _ticks(6)
+	_check(match_manager.phase == MatchManager.Phase.WAITING,
+		"one ready player is not a match (%s)" % match_manager.phase_name())
+
+
+## Somebody still deciding should never be dropped into a countdown.
+func _test_nobody_starts_until_everyone_is_ready() -> void:
+	await _ready_up(_null.slot)
+	await _ticks(4)
 	_check(match_manager.phase == MatchManager.Phase.COUNTDOWN,
-		"a second player starts the countdown (%s)" % match_manager.phase_name())
+		"the countdown starts once everyone is ready (%s)" % match_manager.phase_name())
 
 
-## Nobody should be locked out for joining a moment late.
-func _test_a_late_join_restarts_the_countdown() -> void:
-	await _ticks(12)
-	var part_way := match_manager.time_left
+func _test_a_late_join_sends_it_back_to_select() -> void:
 	_jinsoku = await _join(2)
-	await _ticks(2)
-	_check(match_manager.time_left > part_way,
-		"a third player restarts the countdown (%.2f -> %.2f)"
-			% [part_way, match_manager.time_left])
+	await _ticks(4)
+	_check(match_manager.phase == MatchManager.Phase.WAITING,
+		"a late join puts everyone back to choosing (%s)" % match_manager.phase_name())
+
+	await _ready_up(_jinsoku.slot)
+	await _ticks(4)
+	_check(match_manager.phase == MatchManager.Phase.COUNTDOWN,
+		"and it resumes once they are ready too (%s)" % match_manager.phase_name())
 
 
 func _test_the_countdown_becomes_a_fight() -> void:
+	for fighter: Fighter in [_kurogane, _null, _jinsoku]:
+		fighter.slot.is_ready = true
+	match_manager.refresh_readiness()
 	for i in 120:
 		await get_tree().physics_frame
 		if match_manager.phase == MatchManager.Phase.FIGHTING:
@@ -183,6 +247,27 @@ func _test_victory_resets_for_a_rematch() -> void:
 
 
 # --- Local helpers ---
+
+## One bumper tap is one roster step. Cycling is on the bumpers rather than the
+## stick precisely so that walking around before the bell does not change who
+## you are playing.
+func _cycle(slot: PlayerSlot, direction: int) -> void:
+	var source := slot.source as ScriptedInputSource
+	var action := InputFrame.Action.LAUNCHER if direction > 0 else InputFrame.Action.BLOCK
+	source.hold(action, true)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	source.hold(action, false)
+	await _ticks(3)
+
+
+func _ready_up(slot: PlayerSlot) -> void:
+	var source := slot.source as ScriptedInputSource
+	source.hold(InputFrame.Action.JUMP, true)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	source.hold(InputFrame.Action.JUMP, false)
+	await _ticks(3)
 
 ## Applies a lethal hit, which is how a fighter reports a knockout.
 func _knock_out(fighter: Fighter) -> void:

@@ -36,18 +36,29 @@ func bind(fighter: Fighter, manager: MatchManager = null) -> void:
 	if slot != null:
 		_name_label.modulate = slot.color
 
-	_health.max_value = fighter.max_health
-	_power.max_value = fighter.max_power
-	_stamina.max_value = fighter.max_stamina
+	_refresh_ranges()
 
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(_fighter):
 		return
+	# Read the ranges every frame rather than caching them: a character swap in
+	# select changes the maximums under us.
+	_refresh_ranges()
+	_name_label.text = "%s   %s" % [
+		_fighter.slot.get_label() if _fighter.slot != null else "--",
+		_fighter.character_def.display_name,
+	]
 	_health.value = _fighter.health
 	_power.value = _fighter.power
 	_stamina.value = _fighter.stamina
 	_update_stocks()
+
+
+func _refresh_ranges() -> void:
+	_health.max_value = _fighter.max_health
+	_power.max_value = _fighter.max_power
+	_stamina.max_value = _fighter.max_stamina
 
 
 func _update_stocks() -> void:
