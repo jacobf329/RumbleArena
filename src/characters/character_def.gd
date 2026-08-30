@@ -22,6 +22,12 @@ extends Resource
 @export_range(1, 5) var stat_focus: int = 3
 @export_range(1, 5) var stat_toughness: int = 3
 
+@export_group("Combat")
+## The attacks this fighter has. Frame data is shared and then scaled by SPEED,
+## so one authored moveset still produces a sluggish bruiser and a snappy
+## sprinter -- see get_attack_speed_scale().
+@export var move_set: MoveSet
+
 @export_group("Presentation")
 @export var body_color: Color = Color.WHITE
 
@@ -93,6 +99,17 @@ func get_max_health() -> float:
 
 func get_max_power() -> float:
 	return 60.0 + stat_focus * 20.0
+
+
+func get_max_stamina() -> float:
+	return 60.0 + stat_toughness * 10.0
+
+
+## Multiplier on attack startup and recovery. Active frames are never scaled, so
+## a hitbox is live for the same length of time for everyone and only the
+## commitment wrapped around it differs.
+func get_attack_speed_scale() -> float:
+	return 1.35 - 0.12 * stat_speed
 
 
 ## Heaviest mass class this fighter can lift or break. Used from M3 onward.

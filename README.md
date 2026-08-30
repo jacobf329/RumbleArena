@@ -9,9 +9,13 @@ lift, climb, break, or hack is gated by your character's stats.
 
 ## Status
 
-**M1 complete** — four players can join with gamepads or keyboard and run, jump,
-double-jump and dash around a grey-box arena under a single shared camera.
-Combat starts at M2. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**M2 complete** — four players can join with gamepads or keyboard, move around a
+grey-box arena under a single shared camera, and fight: light chains, heavy and
+launcher confirms, blocking, dodging, juggles, knockdowns and wall splats.
+Stat-gated environmental interaction starts at M3. See
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+![Kurogane landing a heavy](docs/images/m2-impact.png)
 
 ![Four players in the Proving Ground](docs/images/m1-four-players.png)
 
@@ -52,8 +56,15 @@ Yamabuki jumps highest.
 | Grab / Block | B / LB | U / Ctrl |
 | Interact / Signature / Ultimate | D-pad up / RT / D-pad down | E / Q / R |
 
-F5 returns everyone to their spawn. Combat buttons are wired through to the
-input layer but do nothing yet — that is M2.
+F5 returns everyone to their spawn.
+
+Light chains into itself three times; heavy and launcher are confirms that only
+cancel out of a move that actually connected, so whiffing a heavy costs you the
+full recovery. Block covers the front only. Dodge has invulnerability frames and
+costs stamina. Knocking someone into a wall splats them and hands you a juggle.
+
+A defeated fighter currently respawns at full health so playtesting continues —
+stocks and match flow arrive with M4.
 
 ## Testing
 
@@ -61,10 +72,11 @@ input layer but do nothing yet — that is M2.
 GODOT=/path/to/godot ./run_tests.sh
 ```
 
-Imports the project to surface script and scene parse errors, then runs a
-36-check smoke test that drives real fighters through the real main scene using
-scripted input sources. Because fighters only ever read an `InputFrame`, the
-whole movement system is testable headlessly with no hardware.
+Imports the project to surface script and scene parse errors, then runs the
+suites: 36 movement, input and camera checks, and 51 combat checks. Every test
+drives real fighters through the real main scene using scripted input sources.
+Because fighters only ever read an `InputFrame`, the whole game is testable
+headlessly with no hardware.
 
 ## Repo layout
 
@@ -74,6 +86,7 @@ whole movement system is testable headlessly with no hardware.
 | `src/core/` | Match flow, game state, player management |
 | `src/input/` | `InputSource` / `InputFrame` abstraction (keyboard + gamepad) |
 | `src/characters/` | `CharacterDef` resources, fighter, state machine, roster |
+| `src/combat/` | Frame data, movesets, hit resolution, damage formulas |
 | `src/powers/` | Power base class and per-character powers |
 | `src/interactables/` | Liftable, Climbable, Hackable, Breakable, Hazard |
 | `src/camera/` | Shared smart arena camera |

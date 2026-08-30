@@ -32,9 +32,16 @@ extends Camera3D
 ## The camera focus is clamped inside this, so an arena edge never shows void.
 @export var bounds := AABB(Vector3(-18, 0, -18), Vector3(36, 10, 36))
 
+@export_group("Shake")
+## Peak screen offset in world units at full strength.
+@export var shake_scale := 0.06
+## Seconds for a shake to decay to nothing.
+@export var shake_decay := 3.5
+
 var _targets: Array[Node3D] = []
 var _focus := Vector3.ZERO
 var _distance := 20.0
+var _shake := 0.0
 
 
 func _ready() -> void:
@@ -74,6 +81,7 @@ func _physics_process(delta: float) -> void:
 	var zoom_rate := zoom_out_speed if desired_distance > _distance else zoom_in_speed
 	_distance = lerpf(_distance, desired_distance, minf(zoom_rate * delta, 1.0))
 
+	_shake = maxf(_shake - shake_decay * delta, 0.0)
 	_apply_transform()
 
 
@@ -132,10 +140,29 @@ func _clamp_to_bounds(point: Vector3) -> Vector3:
 	)
 
 
+## Shared camera means shared shake -- every player feels the hit, not just the
+## two involved. In a four-player game that reads as the arena reacting rather
+## than as a private effect, which is why shake is global while hitstop is not.
+func add_shake(strength: float) -> void:
+	_shake = maxf(_shake, clampf(strength, 0.0, 1.0))
+
+
+func get_shake() -> float:
+	return _shake
+
+
 func _apply_transform() -> void:
 	var look_at_point := _focus + Vector3.UP * look_height
 	# The camera looks down its own -Z, so backing off means adding +Z.
-	global_position = look_at_point + global_transform.basis.z * _distance
+	var basis := global_transform.basis
+	global_position = look_at_point + basis.z * _distance
+
+	if _shake > 0.0:
+		# Offset along the camera's own right and up, so it reads as the screen
+		# shaking rather than the camera wandering through the world.
+		var amount := _shake * _shake * shake_scale * _distance
+		global_position += basis.x * randf_range(-amount, amount) \
+			+ basis.y * randf_range(-amount, amount)
 
 
 ## Current framing distance, for tests and for the M2 soft leash.

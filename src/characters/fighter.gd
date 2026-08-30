@@ -6,6 +6,8 @@
 class_name Fighter
 extends CharacterBody3D
 
+const DEFAULT_MOVE_SET := preload("res://src/combat/movesets/standard.tres")
+
 ## How long after a press a jump stays queued, so an early press still fires.
 const JUMP_BUFFER := 0.12
 ## How long after walking off a ledge a ground jump is still allowed.
@@ -19,13 +21,40 @@ const AIR_JUMP_SCALE := 0.92
 ## Below this height a fighter has fallen out of the arena and is put back.
 const FALL_OUT_HEIGHT := -12.0
 
+## Ticks an attack press stays queued. Without this, cancelling into the next
+## link means hitting the exact frame the window opens, which no one can do.
+const ATTACK_BUFFER_TICKS := 16
+const DODGE_STAMINA := 24.0
+const DODGE_INVULNERABLE_TICKS := 9
+const STAMINA_REGEN_PER_SECOND := 22.0
+const STAMINA_REGEN_DELAY := 0.35
+## Ticks the body flashes white on being hit.
+const HIT_FLASH_TICKS := 6
+## Drag applied to knockback, so a hit carries rather than stopping dead.
+const HITSTUN_DRAG := 4.0
+## How much control an attack leaves you: almost none.
+const ATTACK_DRIFT_DRAG := 30.0
+
+signal damaged(result: HitResult)
+signal defeated()
+
 @export var character_def: CharacterDef
 
 var slot: PlayerSlot
 var spawn_point := Vector3.ZERO
 
+var move_set: MoveSet
+
 var health: float = 100.0
+var max_health: float = 100.0
 var power: float = 0.0
+var max_power: float = 100.0
+var stamina: float = 100.0
+var max_stamina: float = 100.0
+
+## Set immediately before a transition into ATTACK / HITSTUN.
+var pending_attack: AttackDef
+var pending_hitstun: int = 0
 
 var _states: Dictionary = {}
 var _state: FighterState
@@ -40,6 +69,31 @@ var _air_jumps_left := 0
 var _air_dashes_left := 0
 var _dash_cooldown := 0.0
 
+var _attack_buffer_action: int = -1
+var _attack_buffer_ticks: int = 0
+var _light_chain_index: int = 0
+## Counts attacks entered by cancelling out of another, rather than started
+## fresh. Purely observational, but it is the only unambiguous way to tell a
+## real cancel from simply waiting out the recovery.
+var cancel_count: int = 0
+## Attacks entered, however they started. Observational.
+var attacks_started: int = 0
+var _attack_pressed_this_tick := false
+
+var _hitstop: int = 0
+var _invulnerable: int = 0
+var _blockstun: int = 0
+var _flash_ticks: int = 0
+var _knockdown_pending := false
+var _stamina_delay := 0.0
+var _speed_before_move := 0.0
+
+var _hitbox_shape := BoxShape3D.new()
+var _hitbox_query := PhysicsShapeQueryParameters3D.new()
+var _body_material: StandardMaterial3D
+var _base_color := Color.WHITE
+
+@onready var _visual: Node3D = $Visual
 @onready var _body_mesh: MeshInstance3D = $Visual/Body
 @onready var _accent_mesh: MeshInstance3D = $Visual/Accent
 @onready var _nameplate: Label3D = $Nameplate
@@ -48,17 +102,32 @@ var _dash_cooldown := 0.0
 func _ready() -> void:
 	if character_def == null:
 		character_def = CharacterDef.new()
+	move_set = character_def.move_set if character_def.move_set != null else DEFAULT_MOVE_SET
+
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 24.0))
-	health = character_def.get_max_health()
+	max_health = character_def.get_max_health()
+	max_power = character_def.get_max_power()
+	max_stamina = character_def.get_max_stamina()
+	health = max_health
+	stamina = max_stamina
 	_air_jumps_left = character_def.get_extra_jumps()
 	_air_dashes_left = 1
+
+	_hitbox_query.shape = _hitbox_shape
+	_hitbox_query.collision_mask = Layers.HURTBOX
+	_hitbox_query.collide_with_areas = true
+	_hitbox_query.collide_with_bodies = false
 
 	_build_states()
 	_apply_presentation()
 
 
 func _build_states() -> void:
-	for state: FighterState in [IdleState.new(), RunState.new(), AirState.new(), DashState.new()]:
+	var states: Array[FighterState] = [
+		IdleState.new(), RunState.new(), AirState.new(), DashState.new(),
+		AttackState.new(), HitstunState.new(), KnockdownState.new(), BlockState.new(),
+	]
+	for state in states:
 		state.setup(self)
 		_states[state.get_id()] = state
 	_state = _states[FighterState.IDLE]
@@ -69,15 +138,16 @@ func _build_states() -> void:
 ## "which one am I" is answered by silhouette, and the character shows up as an
 ## accent stripe. Pillar P3.
 func _apply_presentation() -> void:
-	var slot_color: Color = slot.color if slot != null else Color.WHITE
-	_body_mesh.material_override = _flat_material(slot_color)
+	_base_color = slot.color if slot != null else Color.WHITE
+	_body_material = _flat_material(_base_color)
+	_body_mesh.material_override = _body_material
 	_accent_mesh.material_override = _flat_material(character_def.body_color)
 
 	_nameplate.text = "%s  %s" % [
 		slot.get_label() if slot != null else "--",
 		character_def.display_name,
 	]
-	_nameplate.modulate = slot_color
+	_nameplate.modulate = _base_color
 
 
 func _flat_material(color: Color) -> StandardMaterial3D:
@@ -88,12 +158,30 @@ func _flat_material(color: Color) -> StandardMaterial3D:
 
 
 func _physics_process(delta: float) -> void:
+	# Hitstop freezes this fighter only. Global hitstop would be wrong in a
+	# four-player game: the two players not involved in the hit would have their
+	# own fight stuttered by someone else's.
+	if _hitstop > 0:
+		_hitstop -= 1
+		# Presses still register while frozen. Hitstop lands exactly when a
+		# player is inputting the next hit of a combo, so eating those presses
+		# would make every chain feel like it dropped -- and the buffer must not
+		# decay during a freeze either, or hitstop would shorten its own window.
+		_capture_buffered_presses()
+		_update_flash()
+		return
+
 	_update_timers(delta)
 
 	var next := _state.physics_update(delta)
-	if next != FighterState.STAY and next != _state_id:
+	if next != FighterState.STAY:
+		# Note the absence of a "different state" guard: cancelling one attack
+		# into another is a transition from ATTACK to ATTACK, and suppressing
+		# self-transitions would silently swallow every chain and confirm.
+		# States already return STAY to mean "no change".
 		_transition_to(next)
 
+	_speed_before_move = velocity.length()
 	move_and_slide()
 
 	if global_position.y < FALL_OUT_HEIGHT:
@@ -103,14 +191,18 @@ func _physics_process(delta: float) -> void:
 func _update_timers(delta: float) -> void:
 	_dash_cooldown = maxf(_dash_cooldown - delta, 0.0)
 	_jump_buffer = maxf(_jump_buffer - delta, 0.0)
+	_invulnerable = maxi(_invulnerable - 1, 0)
+	_blockstun = maxi(_blockstun - 1, 0)
 
 	if is_on_floor():
 		_coyote = COYOTE_TIME
 	else:
 		_coyote = maxf(_coyote - delta, 0.0)
 
-	if get_input().is_just_pressed(InputFrame.Action.JUMP):
-		_jump_buffer = JUMP_BUFFER
+	_capture_buffered_presses()
+	_decay_attack_buffer()
+	_regenerate_stamina(delta)
+	_update_flash()
 
 
 func _transition_to(id: StringName) -> void:
@@ -162,6 +254,43 @@ func get_facing_direction() -> Vector3:
 	return Basis(Vector3.UP, rotation.y) * Vector3.FORWARD
 
 
+## Records presses without ageing the buffer. Safe to call during hitstop.
+func _capture_buffered_presses() -> void:
+	_attack_pressed_this_tick = false
+	var input := get_input()
+	if input.is_just_pressed(InputFrame.Action.JUMP):
+		_jump_buffer = JUMP_BUFFER
+
+	for action: InputFrame.Action in [
+		InputFrame.Action.LIGHT, InputFrame.Action.HEAVY, InputFrame.Action.LAUNCHER
+	]:
+		if input.is_just_pressed(action):
+			_attack_buffer_action = action
+			_attack_buffer_ticks = ATTACK_BUFFER_TICKS
+			_attack_pressed_this_tick = true
+			return
+
+
+func _decay_attack_buffer() -> void:
+	# Tracked with a flag rather than by comparing the counter to its maximum:
+	# that comparison is also true on the tick after a press, so the buffer
+	# would refuse to age and hold its action forever.
+	if _attack_pressed_this_tick:
+		return
+	_attack_buffer_ticks = maxi(_attack_buffer_ticks - 1, 0)
+	if _attack_buffer_ticks == 0:
+		_attack_buffer_action = -1
+
+
+func _peek_attack_buffer() -> int:
+	return _attack_buffer_action if _attack_buffer_ticks > 0 else -1
+
+
+func _clear_attack_buffer() -> void:
+	_attack_buffer_action = -1
+	_attack_buffer_ticks = 0
+
+
 # --- Movement helpers used by the states ---
 
 func apply_gravity(delta: float) -> void:
@@ -195,6 +324,27 @@ func apply_air_acceleration(direction: Vector3, delta: float) -> void:
 	var rate := character_def.get_acceleration() * character_def.get_air_control() * delta
 	velocity.x = move_toward(velocity.x, target.x, rate)
 	velocity.z = move_toward(velocity.z, target.z, rate)
+
+
+## An attack takes your footing away. Committing is the whole point of a heavy.
+func apply_attack_drift(delta: float) -> void:
+	var rate := ATTACK_DRIFT_DRAG * delta
+	velocity.x = move_toward(velocity.x, 0.0, rate)
+	velocity.z = move_toward(velocity.z, 0.0, rate)
+
+
+func apply_hitstun_drag(delta: float) -> void:
+	var rate := HITSTUN_DRAG * delta
+	velocity.x = move_toward(velocity.x, 0.0, rate)
+	velocity.z = move_toward(velocity.z, 0.0, rate)
+
+
+func apply_step(distance: float) -> void:
+	if is_zero_approx(distance):
+		return
+	var step := get_facing_direction() * distance
+	velocity.x += step.x
+	velocity.z += step.z
 
 
 func face_movement(direction: Vector3, delta: float) -> void:
@@ -235,22 +385,97 @@ func request_jump() -> bool:
 	return false
 
 
-## One air dash per airborne period, on top of the cooldown, so dashing cannot
-## be chained into free flight.
+## One air dash per airborne period, on top of the cooldown and the stamina
+## cost, so dodging cannot be chained into free flight.
 func request_dash() -> bool:
 	if _dash_cooldown > 0.0:
 		return false
 	if not get_input().is_just_pressed(InputFrame.Action.DODGE):
 		return false
+	if not is_on_floor() and _air_dashes_left <= 0:
+		return false
+	if not spend_stamina(DODGE_STAMINA):
+		return false
 	if not is_on_floor():
-		if _air_dashes_left <= 0:
-			return false
 		_air_dashes_left -= 1
 	return true
 
 
+## Starts a fresh attack (not a cancel). Grounded and airborne fighters draw
+## from different halves of the moveset.
+func request_attack() -> bool:
+	var action := _peek_attack_buffer()
+	if action == -1:
+		return false
+
+	var grounded := is_on_floor()
+	var attack: AttackDef = null
+	match action:
+		InputFrame.Action.LIGHT:
+			_light_chain_index = 0
+			attack = move_set.light(0) if grounded else move_set.air_light
+		InputFrame.Action.HEAVY:
+			attack = move_set.heavy if grounded else move_set.air_heavy
+		InputFrame.Action.LAUNCHER:
+			attack = move_set.launcher if grounded else move_set.air_heavy
+
+	if attack == null:
+		return false
+	_clear_attack_buffer()
+	pending_attack = attack
+	return true
+
+
+## Called from AttackState once the cancel window is open. `connected` gates the
+## confirms: whiffing a heavy costs you the full recovery.
+func consume_cancel(current: AttackDef, connected: bool) -> StringName:
+	if current.cancel_requires_hit and not connected:
+		return FighterState.STAY
+
+	var action := _peek_attack_buffer()
+	if action == -1 or not is_on_floor():
+		return FighterState.STAY
+
+	var attack: AttackDef = null
+	match action:
+		InputFrame.Action.LIGHT:
+			if move_set.has_light_follow_up(_light_chain_index):
+				_light_chain_index += 1
+				attack = move_set.light(_light_chain_index)
+		InputFrame.Action.HEAVY:
+			if connected:
+				attack = move_set.heavy
+		InputFrame.Action.LAUNCHER:
+			if connected:
+				attack = move_set.launcher
+
+	if attack == null:
+		return FighterState.STAY
+	_clear_attack_buffer()
+	pending_attack = attack
+	cancel_count += 1
+	return FighterState.ATTACK
+
+
+func request_block() -> bool:
+	return is_on_floor() and stamina > 0.0 \
+		and get_input().is_held(InputFrame.Action.BLOCK)
+
+
+## Getting up early. Deliberately any of the two defensive buttons, because
+## being on the floor is already punishing enough without a precise input.
+func request_tech() -> bool:
+	var input := get_input()
+	return input.is_just_pressed(InputFrame.Action.DODGE) \
+		or input.is_just_pressed(InputFrame.Action.JUMP)
+
+
 func start_dash_cooldown() -> void:
 	_dash_cooldown = character_def.get_dash_cooldown()
+
+
+func end_attack_chain() -> void:
+	_light_chain_index = 0
 
 
 func on_landed() -> void:
@@ -260,6 +485,172 @@ func on_landed() -> void:
 
 func _jump_velocity() -> float:
 	return sqrt(2.0 * _gravity * character_def.get_jump_height())
+
+
+# --- Combat ---
+
+## Everything the hitbox overlaps this tick. A direct shape query rather than an
+## Area3D, so the hitbox is live on exactly the ticks the frame data says.
+func query_hitbox(attack: AttackDef) -> Array:
+	_hitbox_shape.size = attack.hitbox_size
+	_hitbox_query.transform = Transform3D(
+		global_transform.basis,
+		global_position + global_transform.basis * attack.hitbox_offset
+	)
+
+	var victims: Array = []
+	for contact in get_world_3d().direct_space_state.intersect_shape(_hitbox_query, 8):
+		var hurtbox := contact["collider"] as Hurtbox
+		if hurtbox == null:
+			continue
+		var other := hurtbox.fighter as Fighter
+		if other != null and other != self:
+			victims.append(other)
+	return victims
+
+
+## Resolves one connection. Returns whether it actually landed, which is what
+## gates the confirm cancels.
+func deal_hit(attack: AttackDef, victim: Fighter) -> bool:
+	if victim.is_invulnerable():
+		return false
+
+	var contact: Vector3 = global_position.lerp(victim.global_position, 0.5) + Vector3.UP * 1.05
+	var blocked := victim.is_blocking_against(global_position)
+	var result := CombatMath.build_hit(attack, self, character_def, victim.character_def,
+		get_facing_direction(), contact, blocked)
+
+	victim.take_hit(result)
+	power = minf(power + attack.power_gain, max_power)
+	apply_hitstop(result.hitstop_ticks)
+	return true
+
+
+func take_hit(result: HitResult) -> void:
+	health = maxf(health - result.damage, 0.0)
+	apply_hitstop(result.hitstop_ticks)
+	_flash_ticks = HIT_FLASH_TICKS
+	_spawn_feedback(result)
+	damaged.emit(result)
+
+	if result.blocked:
+		# Blocked hits shove but never launch, and hold you in guard rather than
+		# taking your state away.
+		spend_stamina(result.damage * CombatMath.BLOCK_STAMINA_PER_DAMAGE)
+		velocity.x = result.knockback.x
+		velocity.z = result.knockback.z
+		_blockstun = result.hitstun_ticks
+	else:
+		velocity = result.knockback
+		pending_hitstun = result.hitstun_ticks
+		_knockdown_pending = result.knockback.length() >= CombatMath.KNOCKDOWN_SPEED
+		_transition_to(FighterState.HITSTUN)
+
+	if health <= 0.0:
+		defeated.emit()
+		respawn()
+
+
+func _spawn_feedback(result: HitResult) -> void:
+	var attacker := result.attacker as Fighter
+	var color := Color(1, 0.9, 0.6)
+	if result.blocked:
+		color = Color(0.6, 0.8, 1.0)
+	elif attacker != null and attacker.slot != null:
+		color = attacker.slot.color.lerp(Color.WHITE, 0.5)
+
+	HitSpark.spawn(get_tree().current_scene, result.position, color, result.damage)
+
+	var camera := get_viewport().get_camera_3d() as ArenaCamera
+	if camera != null:
+		camera.add_shake(clampf(result.damage / 26.0, 0.12, 1.0))
+
+
+## Freezes both fighters for a moment on connect. With no animation to sell the
+## hit, this and the knockback are where the impact actually comes from.
+func apply_hitstop(ticks: int) -> void:
+	_hitstop = maxi(_hitstop, ticks)
+
+
+func grant_invulnerability(ticks: int) -> void:
+	_invulnerable = maxi(_invulnerable, ticks)
+
+
+func is_invulnerable() -> bool:
+	return _invulnerable > 0
+
+
+func is_in_blockstun() -> bool:
+	return _blockstun > 0
+
+
+func is_knockdown_pending() -> bool:
+	return _knockdown_pending
+
+
+func clear_knockdown() -> void:
+	_knockdown_pending = false
+
+
+## A block only covers the front. Getting flanked has to cost something, or
+## holding guard would be strictly correct.
+func is_blocking_against(attacker_position: Vector3) -> bool:
+	if _state_id != FighterState.BLOCK:
+		return false
+	var to_attacker := attacker_position - global_position
+	to_attacker.y = 0.0
+	if to_attacker.length_squared() < 0.0001:
+		return true
+	return get_facing_direction().dot(to_attacker.normalized()) > 0.0
+
+
+## True on the tick a high-speed knockback drove this fighter into a wall.
+## Uses the speed recorded before the last move, because move_and_slide has
+## already spent it by the time the collision is visible.
+func check_wall_splat() -> bool:
+	if _speed_before_move < CombatMath.WALL_SPLAT_SPEED:
+		return false
+	for i in get_slide_collision_count():
+		var normal := get_slide_collision(i).get_normal()
+		if absf(normal.y) < 0.5:
+			# Peel off the wall so the victim is juggle-able rather than pinned,
+			# and cancel the pending knockdown: any hit hard enough to splat is
+			# also hard enough to knock down, and a splat that just put the
+			# victim on the floor would be a worse outcome than a normal hit.
+			velocity = normal * _speed_before_move * 0.28 + Vector3.UP * 3.5
+			_knockdown_pending = false
+			return true
+	return false
+
+
+func spend_stamina(amount: float) -> bool:
+	if stamina < amount:
+		return false
+	stamina -= amount
+	_stamina_delay = STAMINA_REGEN_DELAY
+	return true
+
+
+func _regenerate_stamina(delta: float) -> void:
+	if _stamina_delay > 0.0:
+		_stamina_delay -= delta
+		return
+	stamina = minf(stamina + STAMINA_REGEN_PER_SECOND * delta, max_stamina)
+
+
+func _update_flash() -> void:
+	if _body_material == null:
+		return
+	if _flash_ticks > 0:
+		_flash_ticks -= 1
+		_body_material.albedo_color = Color.WHITE if _flash_ticks > 0 else _base_color
+
+
+func set_downed(downed: bool) -> void:
+	if _visual == null:
+		return
+	_visual.rotation.x = -1.35 if downed else 0.0
+	_visual.position.y = -0.42 if downed else 0.0
 
 
 # --- Match plumbing ---
@@ -276,6 +667,20 @@ func setup(player_slot: PlayerSlot, definition: CharacterDef, spawn: Vector3) ->
 func respawn() -> void:
 	global_position = spawn_point
 	velocity = Vector3.ZERO
+	health = max_health
+	stamina = max_stamina
+	_hitstop = 0
+	_blockstun = 0
+	_knockdown_pending = false
+	cancel_count = 0
+	attacks_started = 0
+	# Drop queued intent as well as state: a fighter should not come back and
+	# immediately act on a button pressed before it went down.
+	_clear_attack_buffer()
+	_jump_buffer = 0.0
+	_coyote = 0.0
+	_invulnerable = 0
+	set_downed(false)
 	_transition_to(FighterState.IDLE)
 
 
@@ -284,12 +689,11 @@ func get_state_id() -> StringName:
 
 
 func get_debug_line() -> String:
-	var planar := Vector2(velocity.x, velocity.z).length()
-	return "%s %-10s %-5s spd %4.1f  air-jump %d  dash %.2f" % [
+	return "%s %-10s %-9s hp %5.1f  pw %5.1f  st %5.1f" % [
 		slot.get_label() if slot != null else "--",
 		character_def.display_name,
 		_state_id,
-		planar,
-		_air_jumps_left,
-		_dash_cooldown,
+		health,
+		power,
+		stamina,
 	]

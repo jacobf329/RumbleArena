@@ -13,6 +13,10 @@ const IDLE := &"idle"
 const RUN := &"run"
 const AIR := &"air"
 const DASH := &"dash"
+const ATTACK := &"attack"
+const HITSTUN := &"hitstun"
+const KNOCKDOWN := &"knockdown"
+const BLOCK := &"block"
 
 const STAY := &""
 

@@ -1,0 +1,86 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://src/ui/player_meter.gd" id="1_meter"]
+
+[sub_resource type="StyleBoxFlat" id="Panel_bg"]
+content_margin_left = 12.0
+content_margin_top = 9.0
+content_margin_right = 12.0
+content_margin_bottom = 9.0
+bg_color = Color(0.05, 0.05, 0.07, 0.7)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="Bar_bg"]
+bg_color = Color(0.14, 0.15, 0.18, 0.95)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="Fill_health"]
+bg_color = Color(0.85, 0.26, 0.22, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="Fill_power"]
+bg_color = Color(0.36, 0.66, 0.96, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="Fill_stamina"]
+bg_color = Color(0.55, 0.8, 0.42, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="LabelSettings" id="Label_name"]
+font_size = 18
+outline_size = 5
+outline_color = Color(0, 0, 0, 0.8)
+
+[node name="PlayerMeter" type="PanelContainer"]
+custom_minimum_size = Vector2(300, 0)
+theme_override_styles/panel = SubResource("Panel_bg")
+script = ExtResource("1_meter")
+
+[node name="Rows" type="VBoxContainer" parent="."]
+theme_override_constants/separation = 6
+
+[node name="Name" type="Label" parent="Rows"]
+text = "P?"
+label_settings = SubResource("Label_name")
+
+[node name="Health" type="ProgressBar" parent="Rows"]
+custom_minimum_size = Vector2(0, 18)
+theme_override_styles/background = SubResource("Bar_bg")
+theme_override_styles/fill = SubResource("Fill_health")
+max_value = 180.0
+value = 180.0
+show_percentage = false
+
+[node name="Small" type="HBoxContainer" parent="Rows"]
+theme_override_constants/separation = 8
+
+[node name="Power" type="ProgressBar" parent="Rows/Small"]
+custom_minimum_size = Vector2(0, 9)
+size_flags_horizontal = 3
+theme_override_styles/background = SubResource("Bar_bg")
+theme_override_styles/fill = SubResource("Fill_power")
+value = 0.0
+show_percentage = false
+
+[node name="Stamina" type="ProgressBar" parent="Rows/Small"]
+custom_minimum_size = Vector2(0, 9)
+size_flags_horizontal = 3
+theme_override_styles/background = SubResource("Bar_bg")
+theme_override_styles/fill = SubResource("Fill_stamina")
+value = 100.0
+show_percentage = false

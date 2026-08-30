@@ -20,6 +20,7 @@ func enter(_previous: StringName) -> void:
 	_time_left = fighter.character_def.get_dash_duration()
 	fighter.start_dash_cooldown()
 	fighter.snap_facing(_direction)
+	fighter.grant_invulnerability(Fighter.DODGE_INVULNERABLE_TICKS)
 
 
 func physics_update(delta: float) -> StringName:

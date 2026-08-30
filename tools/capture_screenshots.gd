@@ -41,12 +41,46 @@ func _ready() -> void:
 	await _pose(POSES)
 	await _capture("m1_four_players.png")
 
+	await _combat_shot()
+
 	# Two fighters close together, to show the camera pushing in.
 	await _pose([Vector3(-2.5, 0.3, 11.0), Vector3(2.5, 0.3, 11.0),
 		Vector3(-1.0, 0.3, 13.5), Vector3(4.0, 0.3, 13.5)])
 	await _capture("m1_camera_close.png")
 
 	get_tree().quit()
+
+
+## Catches the frame a heavy connects: hit spark, flash, and the meters
+## reacting. This is the shot that actually shows whether the impact reads.
+func _combat_shot() -> void:
+	var attacker := _fighters[0]
+	var victim := _fighters[3]
+
+	# Open floor south of the ramp, so nothing stands between the camera and the
+	# point of contact.
+	await _pose([
+		Vector3(-4.0, 0.3, 13.5), Vector3(2.8, 0.3, 12.2),
+		Vector3(-8.0, 0.3, 12.6), Vector3(-2.6, 0.3, 13.5),
+	])
+	attacker.snap_facing(Vector3.RIGHT)
+	victim.snap_facing(Vector3.LEFT)
+	victim.health = victim.max_health * 0.55
+	attacker.power = attacker.max_power * 0.7
+
+	var connected := [false]
+	victim.damaged.connect(func(_result: HitResult) -> void: connected[0] = true)
+
+	var source := attacker.slot.source as ScriptedInputSource
+	source.hold(InputFrame.Action.HEAVY, true)
+	await get_tree().physics_frame
+	source.hold(InputFrame.Action.HEAVY, false)
+
+	for tick in 120:
+		await get_tree().physics_frame
+		if connected[0]:
+			break
+	await _capture("m2_impact.png")
 
 
 func _pose(positions: Array) -> void:

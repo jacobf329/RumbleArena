@@ -24,6 +24,8 @@ func physics_update(delta: float) -> StringName:
 
 	if fighter.request_dash():
 		return DASH
+	if fighter.request_attack():
+		return ATTACK
 	if fighter.is_on_floor():
 		fighter.on_landed()
 		return RUN if direction != Vector3.ZERO else IDLE

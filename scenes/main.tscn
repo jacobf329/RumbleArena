@@ -86,3 +86,18 @@ label_settings = SubResource("LabelSettings_body")
 
 [node name="Controls" type="Label" parent="HUD/DebugHUD/Margin/Rows"]
 label_settings = SubResource("LabelSettings_body")
+
+[node name="Meters" type="HBoxContainer" parent="HUD/DebugHUD"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = -110.0
+offset_right = -28.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 16

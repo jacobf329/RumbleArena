@@ -46,6 +46,7 @@ func _on_player_joined(slot: PlayerSlot) -> void:
 	_fighters.append(fighter)
 	_camera.add_target(fighter)
 	_hud.fighters = _fighters
+	_hud.add_meter(fighter)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

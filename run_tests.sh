@@ -3,9 +3,9 @@
 #
 #   ./run_tests.sh
 #
-# Runs two passes: an import pass that surfaces script and scene parse errors,
-# then the M1 smoke test, which drives real fighters through the real main scene
-# with scripted input sources.
+# Runs an import pass that surfaces script and scene parse errors, then every
+# test suite. Each drives real fighters through the real main scene with
+# scripted input sources.
 set -uo pipefail
 
 GODOT="${GODOT:-godot}"
@@ -19,5 +19,12 @@ if grep -qE "SCRIPT ERROR|Parse Error|Failed loading resource" <<<"$import_outpu
 	exit 1
 fi
 
-echo "==> Running M1 smoke test"
-"$GODOT" --headless --path "$PROJECT" res://tests/m1_smoke_test.tscn
+status=0
+for suite in m1_smoke_test m2_combat_test; do
+	echo
+	echo "==> Running $suite"
+	if ! "$GODOT" --headless --path "$PROJECT" "res://tests/$suite.tscn"; then
+		status=1
+	fi
+done
+exit "$status"

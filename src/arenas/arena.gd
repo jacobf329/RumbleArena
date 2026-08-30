@@ -6,17 +6,6 @@
 class_name Arena
 extends Node3D
 
-## Physics layers used across the game.
-##
-## Keeping the invisible boundary off the WORLD layer is what lets anything ask
-## "is the view of this fighter blocked?" by raycasting against WORLD alone --
-## the boundary stops fighters without ever counting as something you can see.
-enum Layer {
-	WORLD = 1,     ## Visible arena geometry.
-	FIGHTER = 2,   ## Fighters.
-	BARRIER = 4,   ## Invisible containment; blocks movement, never blocks sight.
-}
-
 @export var display_name := "Untitled Arena"
 ## Focus volume for the shared camera. Kept a little inside the walls.
 @export var camera_bounds := AABB(Vector3(-14, 0, -14), Vector3(28, 9, 28))

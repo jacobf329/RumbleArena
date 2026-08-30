@@ -1,30 +1,13 @@
-## Headless verification of the M1 systems.
-##
-## Runs the real main scene with scripted input sources, so this exercises the
-## same code path a player does rather than a parallel test-only one. Exits
-## non-zero if any check fails.
-extends Node
-
-const MAIN_SCENE := preload("res://scenes/main.tscn")
+## Headless verification of the M1 movement, input and camera systems.
+extends TestHarness
 
 ## An open lane of arena floor with no geometry in it, so movement tests measure
 ## movement rather than how quickly a fighter finds a wall.
 const CLEAR_LANE_Z := 13.0
 
-var _failures: Array[String] = []
-var _checks := 0
-var _main: Node3D
-var _camera: ArenaCamera
 
-
-func _ready() -> void:
-	_main = MAIN_SCENE.instantiate()
-	add_child(_main)
-	await get_tree().physics_frame
-	_camera = _main.get_node("ArenaCamera")
-	PlayerManager.join_enabled = false
-	await _run()
-	_report()
+func _init() -> void:
+	test_name = "M1 smoke test"
 
 
 func _run() -> void:
@@ -293,7 +276,7 @@ func _test_camera_has_clear_view(a: Fighter, b: Fighter) -> void:
 	for fighter: Fighter in [a, b]:
 		var query := PhysicsRayQueryParameters3D.create(
 			_camera.global_position, fighter.global_position + Vector3.UP * 1.2)
-		query.collision_mask = Arena.Layer.WORLD
+		query.collision_mask = Layers.WORLD
 		var hit := space.intersect_ray(query)
 		_check(hit.is_empty(), "the camera can see %s pressed against the arena edge%s"
 			% [fighter.character_def.display_name,
@@ -308,19 +291,7 @@ func _test_fall_out_respawns(fighter: Fighter) -> void:
 		"falling out of the arena puts the fighter back on its spawn")
 
 
-# --- Harness plumbing ---
-
-func _join(slot_index: int) -> Fighter:
-	var slot: PlayerSlot = PlayerManager.slots[slot_index]
-	slot.source = ScriptedInputSource.new()
-	PlayerManager.player_joined.emit(slot)
-	await get_tree().physics_frame
-	return slot.fighter as Fighter
-
-
-func _source(fighter: Fighter) -> ScriptedInputSource:
-	return fighter.slot.source as ScriptedInputSource
-
+# --- Local helpers ---
 
 func _place(fighter: Fighter, position: Vector3) -> void:
 	_source(fighter).release_all()
@@ -343,35 +314,3 @@ func _hold_apart(a: Fighter, b: Fighter, half_gap: float) -> void:
 	for i in 240:
 		_set_apart(a, b, half_gap)
 		await get_tree().physics_frame
-
-
-## Holds an action for two ticks then releases, producing exactly one
-## just-pressed edge that the fighter is guaranteed to observe.
-func _press(source: ScriptedInputSource, action: InputFrame.Action) -> void:
-	source.hold(action, true)
-	await get_tree().physics_frame
-	await get_tree().physics_frame
-	source.hold(action, false)
-	await get_tree().physics_frame
-
-
-func _ticks(count: int) -> void:
-	for i in count:
-		await get_tree().physics_frame
-
-
-func _check(condition: bool, description: String) -> void:
-	_checks += 1
-	if condition:
-		print("  PASS  %s" % description)
-	else:
-		print("  FAIL  %s" % description)
-		_failures.append(description)
-
-
-func _report() -> void:
-	print("")
-	print("M1 smoke test: %d checks, %d failed" % [_checks, _failures.size()])
-	for failure in _failures:
-		print("  failed: %s" % failure)
-	get_tree().quit(0 if _failures.is_empty() else 1)

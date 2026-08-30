@@ -6,6 +6,9 @@ extends Control
 
 const JOIN_HINT := "Press [A] on a gamepad, or [SPACE] on the keyboard, to join."
 
+const PLAYER_METER := preload("res://scenes/ui/player_meter.tscn")
+
+@onready var _meters: HBoxContainer = $Meters
 @onready var _join_label: Label = $Margin/Rows/JoinHint
 @onready var _players_label: Label = $Margin/Rows/Players
 @onready var _controls_label: Label = $Margin/Rows/Controls
@@ -15,6 +18,15 @@ var fighters: Array[Fighter] = []
 
 func _ready() -> void:
 	_controls_label.text = _controls_text()
+
+
+## Called by the match harness once a fighter exists, rather than by listening
+## for player_joined -- the HUD is a child, so its _ready runs first and it
+## would otherwise handle the signal before the fighter had been spawned.
+func add_meter(fighter: Fighter) -> void:
+	var meter: PlayerMeter = PLAYER_METER.instantiate()
+	_meters.add_child(meter)
+	meter.bind(fighter)
 
 
 func _process(_delta: float) -> void:
