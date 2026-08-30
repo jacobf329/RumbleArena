@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="BlinkStrike" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/powers/blink_strike.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Blink Strike"
+ticks_startup = 8
+ticks_active = 4
+ticks_recovery = 22
+damage = 10.0
+knockback = 9.0
+launch_angle = 30.0
+ticks_hitstun = 30
+ticks_hitstop = 7
+power_gain = 0.0
+step_forward = 0.0
+hitbox_size = Vector3(1.3, 1.4, 1.7)
+hitbox_offset = Vector3(0, 1.0, -1.0)
+animation = &"punch_combo"
+animation_start = 1.8
+animation_impact = 2.03
+animation_end = 2.4
+cancel_window_start = 40
+cancel_requires_hit = true
+power_cost = 35.0
+cooldown_seconds = 5.0
+seek_range = 9.0
+behind_distance = 1.1

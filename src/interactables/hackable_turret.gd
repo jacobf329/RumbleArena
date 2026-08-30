@@ -33,6 +33,7 @@ func _ready() -> void:
 	display_name = "Turret"
 	required_stat = Stats.Type.TECH
 	required_tier = 3
+	add_to_group(&"turrets")
 	_set_light(idle_colour)
 
 
@@ -44,11 +45,18 @@ func is_offered(fighter: Node3D) -> bool:
 func use(fighter: Node3D) -> bool:
 	if not can_use(fighter):
 		return false
+	seize_by(fighter)
+	return true
+
+
+## Taken without the usual TECH check -- the ultimate that does this has already
+## been paid for, and re-testing the stat here would just deny it to the only
+## character who can cast it anyway.
+func seize_by(fighter: Node3D) -> void:
 	controller = fighter
 	var slot = fighter.get("slot")
 	_set_light(slot.color if slot != null else Color.WHITE)
 	_cooldown = fire_interval * 0.5
-	return true
 
 
 func _physics_process(delta: float) -> void:

@@ -27,6 +27,10 @@ extends Resource
 ## so one authored moveset still produces a sluggish bruiser and a snappy
 ## sprinter -- see get_attack_speed_scale().
 @export var move_set: MoveSet
+## The two named specials. Empty for characters whose powers are not built yet;
+## their buttons simply do nothing rather than firing someone else's move.
+@export var signature: Power
+@export var ultimate: Power
 
 @export_group("Presentation")
 @export var body_color: Color = Color.WHITE

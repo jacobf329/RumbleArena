@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="SystemSeize" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/powers/system_seize.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "System Seize"
+ticks_startup = 18
+ticks_active = 2
+ticks_recovery = 30
+damage = 0.0
+knockback = 0.0
+ticks_hitstun = 1
+ticks_hitstop = 0
+power_gain = 0.0
+hitbox_size = Vector3(0.1, 0.1, 0.1)
+hitbox_offset = Vector3(0, 0.5, 0)
+animation = &"shoulder_throw"
+animation_start = 0.2
+animation_impact = 0.9
+animation_end = 1.7
+cancel_window_start = 40
+cancel_requires_hit = true
+power_cost = 100.0
+cooldown_seconds = 30.0

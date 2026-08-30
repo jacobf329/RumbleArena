@@ -62,6 +62,9 @@ func physics_update(delta: float) -> StringName:
 	# move paid for its own fireball and the meter meant nothing.
 	if _tick == _startup and not _fired:
 		_fired = true
+		# Powers resolve before hits so a move that repositions the fighter --
+		# Blink Strike -- still lands its own strike from where it arrived.
+		fighter.activate_power(_attack)
 		fighter.try_launch_fireball(_attack)
 
 	if _tick >= _startup and _tick < _startup + _active:

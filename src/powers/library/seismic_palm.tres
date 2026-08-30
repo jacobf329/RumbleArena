@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="SeismicPalm" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/powers/seismic_palm.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/debris.tscn" id="2_debris"]
+
+[resource]
+script = ExtResource("1_script")
+display_name = "Seismic Palm"
+ticks_startup = 14
+ticks_active = 6
+ticks_recovery = 26
+damage = 12.0
+knockback = 11.0
+launch_angle = 40.0
+ticks_hitstun = 36
+ticks_hitstop = 9
+power_gain = 0.0
+step_forward = 1.0
+hitbox_size = Vector3(3, 1.2, 2.6)
+hitbox_offset = Vector3(0, 0.7, -1.4)
+animation = &"spin_jump"
+animation_start = 0.75
+animation_impact = 1.4
+animation_end = 2.3
+cancel_window_start = 40
+cancel_requires_hit = true
+power_cost = 40.0
+cooldown_seconds = 6.0
+debris_scene = ExtResource("2_debris")
+debris_count = 2
+debris_spread = 1.6

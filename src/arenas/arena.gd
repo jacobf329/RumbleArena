@@ -11,6 +11,16 @@ extends Node3D
 @export var camera_bounds := AABB(Vector3(-14, 0, -14), Vector3(28, 9, 28))
 
 
+func _ready() -> void:
+	add_to_group(&"arena")
+
+
+## Where dynamically created props belong, so debris joins the arena's own
+## interactables rather than whatever container happened to spawn it.
+func interactable_root() -> Node:
+	return get_node_or_null("Interactables") if has_node("Interactables") else self
+
+
 func get_spawn_points() -> Array[Vector3]:
 	var points: Array[Vector3] = []
 	var container := get_node_or_null("SpawnPoints")

@@ -74,6 +74,15 @@ func _run() -> void:
 	await _test_grab_beats_block(kurogane, yamabuki)
 	await _test_whiffed_grab_is_punishable(kurogane)
 
+	_section("Powers")
+	await _test_signature_costs_power_and_cools_down(kurogane, yamabuki)
+	await _test_power_is_refused_without_meter(kurogane, yamabuki)
+	await _test_seismic_palm_leaves_debris(kurogane, yamabuki)
+	await _test_ogre_rampage_absorbs_small_hits(kurogane)
+	await _test_blink_strike_teleports_behind(null_fighter, yamabuki)
+	await _test_system_seize_takes_every_turret(null_fighter)
+	_test_unbuilt_powers_are_simply_absent(jinsoku)
+
 	_section("Rhythm")
 	_test_animation_data_is_sane(kurogane)
 	await _test_mashing_earns_nothing(kurogane, yamabuki)
@@ -540,6 +549,166 @@ func _count_fireballs_in_scene() -> int:
 		if child is Fireball:
 			count += 1
 	return count
+
+
+# --- Powers ---
+
+func _test_signature_costs_power_and_cools_down(fighter: Fighter, victim: Fighter) -> void:
+	await _stage(fighter, victim, 2.6)
+	fighter.power = fighter.max_power
+	var signature: Power = fighter.character_def.signature
+	var before := fighter.power
+
+	_tap(_source(fighter), InputFrame.Action.SIGNATURE)
+	await _pinned_ticks(6, fighter, victim)
+	_check(fighter.get_state_id() == FighterState.ATTACK,
+		"the signature button casts %s (%s)" % [signature.display_name, fighter.get_state_id()])
+	_check(is_equal_approx(fighter.power, before - signature.power_cost),
+		"casting spends the meter (%.0f -> %.0f, cost %.0f)"
+			% [before, fighter.power, signature.power_cost])
+
+	# Charged on commit rather than on connect, so a whiff still costs.
+	await _pinned_ticks(90, fighter, victim)
+	fighter.power = fighter.max_power
+	var attacks := fighter.attacks_started
+	_tap(_source(fighter), InputFrame.Action.SIGNATURE)
+	await _pinned_ticks(8, fighter, victim)
+	_check(fighter.attacks_started == attacks,
+		"the cooldown refuses an immediate second cast")
+	await _pinned_ticks(40, fighter, victim)
+
+
+func _test_power_is_refused_without_meter(fighter: Fighter, victim: Fighter) -> void:
+	await _stage(fighter, victim, 2.6)
+	fighter.power = 0.0
+	var attacks := fighter.attacks_started
+
+	_tap(_source(fighter), InputFrame.Action.SIGNATURE)
+	await _pinned_ticks(12, fighter, victim)
+	_check(fighter.attacks_started == attacks,
+		"an empty meter casts nothing at all")
+
+
+## The damage is ordinary frame data; what makes it Kurogane's is what it leaves
+## behind for him to pick up.
+func _test_seismic_palm_leaves_debris(fighter: Fighter, victim: Fighter) -> void:
+	await _stage(fighter, victim, 2.6)
+	fighter.power = fighter.max_power
+	var before := _count_liftables()
+
+	_tap(_source(fighter), InputFrame.Action.SIGNATURE)
+	await _pinned_ticks(50, fighter, victim)
+
+	_check(_count_liftables() > before,
+		"Seismic Palm cracks the floor into debris (%d -> %d)" % [before, _count_liftables()])
+	await _pinned_ticks(30, fighter, victim)
+
+
+## Armour, not invulnerability: he still takes the damage, he just does not stop.
+func _test_ogre_rampage_absorbs_small_hits(fighter: Fighter) -> void:
+	await _stage(fighter, fighter)
+	var ultimate := fighter.character_def.ultimate as OgreRampage
+	fighter.apply_rampage(ultimate.duration_ticks, ultimate.armour_threshold,
+		ultimate.damage_bonus)
+	await _ticks(4)
+	_check(fighter.is_rampaging(), "the rampage is running")
+
+	var health := fighter.health
+	fighter.take_hit(_crafted_hit(ultimate.armour_threshold - 4.0))
+	await _ticks(3)
+	_check(fighter.get_state_id() != FighterState.HITSTUN,
+		"a small hit does not interrupt a rampage (%s)" % fighter.get_state_id())
+	_check(fighter.health < health, "but it still does its damage (%.1f -> %.1f)"
+		% [health, fighter.health])
+
+	fighter.take_hit(_crafted_hit(ultimate.armour_threshold + 12.0))
+	await _ticks(3)
+	_check(fighter.get_state_id() == FighterState.HITSTUN,
+		"a big enough hit breaks through the armour (%s)" % fighter.get_state_id())
+
+	fighter._rampage_ticks = 0
+	await _ticks(40)
+
+
+func _test_blink_strike_teleports_behind(fighter: Fighter, victim: Fighter) -> void:
+	await _stage(fighter, victim, 6.0)
+	# Blink Strike seeks the NEAREST fighter, and _stage parks the bystanders on
+	# arena spawn points that happen to sit closer than the staged victim.
+	for other: Fighter in _fighters:
+		if other != fighter and other != victim:
+			other.global_position = Vector3(14.0, 0.3, -14.0)
+	await _ticks(6)
+
+	fighter.power = fighter.max_power
+	var start := fighter.global_position
+
+	_tap(_source(fighter), InputFrame.Action.SIGNATURE)
+	await _pinned_until_moved(fighter, start, 60)
+
+	var behind: Vector3 = victim.global_position - victim.get_facing_direction() * 1.1
+	_check(fighter.global_position.distance_to(start) > 2.0,
+		"Blink Strike moves her (%.1f units)" % fighter.global_position.distance_to(start))
+	_check(fighter.global_position.distance_to(behind) < 1.2,
+		"and puts her behind the target (off by %.2f)"
+			% fighter.global_position.distance_to(behind))
+	await _ticks(60)
+
+
+func _test_system_seize_takes_every_turret(fighter: Fighter) -> void:
+	await _stage(fighter, fighter)
+	fighter.power = fighter.max_power
+	var turrets := get_tree().get_nodes_in_group(&"turrets")
+	for node in turrets:
+		(node as HackableTurret).controller = null
+
+	_tap(_source(fighter), InputFrame.Action.ULTIMATE)
+	await _ticks(60)
+
+	var taken := 0
+	for node in turrets:
+		if (node as HackableTurret).controller == fighter:
+			taken += 1
+	_check(turrets.size() > 0, "the arena has turrets to seize (%d)" % turrets.size())
+	_check(taken == turrets.size(),
+		"System Seize takes every turret at once (%d of %d)" % [taken, turrets.size()])
+
+	for node in turrets:
+		(node as HackableTurret).controller = null
+	await _ticks(40)
+
+
+## Characters whose powers are not designed yet get empty slots rather than
+## somebody else's move, so the buttons do nothing instead of lying.
+func _test_unbuilt_powers_are_simply_absent(fighter: Fighter) -> void:
+	_check(fighter.character_def.signature == null and fighter.character_def.ultimate == null,
+		"%s has no powers yet, rather than borrowed ones"
+			% fighter.character_def.display_name)
+
+
+func _crafted_hit(damage: float) -> HitResult:
+	var result := HitResult.new()
+	result.attacker = null
+	result.damage = damage
+	result.knockback = Vector3(0, 4, 6)
+	result.hitstun_ticks = 20
+	result.hitstop_ticks = 0
+	result.position = Vector3.ZERO
+	return result
+
+
+func _count_liftables() -> int:
+	var count := 0
+	for node in _main.get_node("Arena/Interactables").get_children():
+		if node is Liftable:
+			count += 1
+	return count
+
+
+func _pinned_until_moved(fighter: Fighter, from: Vector3, limit: int) -> void:
+	for i in limit:
+		await get_tree().physics_frame
+		if fighter.global_position.distance_to(from) > 2.0:
+			return
 
 
 # --- Rhythm ---

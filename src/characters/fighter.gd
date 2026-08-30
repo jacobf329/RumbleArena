@@ -96,6 +96,11 @@ var flow: int = 0
 ## Damage and knockback multiplier for the attack currently running.
 var strike_scale: float = 1.0
 var _pending_on_beat := false
+
+var _power_cooldowns: Dictionary = {}
+var _rampage_ticks := 0
+var _rampage_armour := 0.0
+var _rampage_bonus := 0.0
 ## Attacks entered, however they started. Observational.
 var attacks_started: int = 0
 var _attack_pressed_this_tick := false
@@ -324,6 +329,9 @@ func _update_timers(delta: float) -> void:
 
 	_capture_buffered_presses()
 	_decay_attack_buffer()
+	_rampage_ticks = maxi(_rampage_ticks - 1, 0)
+	for key in _power_cooldowns:
+		_power_cooldowns[key] = maxf(_power_cooldowns[key] - delta, 0.0)
 	_regenerate_stamina(delta)
 	_update_flash()
 
@@ -387,6 +395,7 @@ func _capture_buffered_presses() -> void:
 	for action: InputFrame.Action in [
 		InputFrame.Action.LIGHT, InputFrame.Action.HEAVY,
 		InputFrame.Action.LAUNCHER, InputFrame.Action.GRAB,
+		InputFrame.Action.SIGNATURE, InputFrame.Action.ULTIMATE,
 	]:
 		if input.is_just_pressed(action):
 			_attack_buffer_action = action
@@ -548,12 +557,56 @@ func request_attack() -> bool:
 			attack = move_set.launcher if grounded else move_set.air_heavy
 		InputFrame.Action.GRAB:
 			attack = move_set.grab if grounded else null
+		InputFrame.Action.SIGNATURE:
+			attack = _affordable_power(character_def.signature)
+		InputFrame.Action.ULTIMATE:
+			attack = _affordable_power(character_def.ultimate)
 
 	if attack == null:
 		return false
 	_clear_attack_buffer()
 	pending_attack = attack
+	_commit_power_cost(attack)
 	return true
+
+
+## A power the meter can pay for and whose cooldown has expired, or null. Not
+## every character has powers built yet; theirs simply return nothing.
+func _affordable_power(candidate: Power) -> Power:
+	if candidate == null:
+		return null
+	if power < candidate.power_cost:
+		return null
+	if _power_cooldowns.get(candidate, 0.0) > 0.0:
+		return null
+	return candidate
+
+
+## Charged on commit, not on connect: a whiffed special costs you the meter.
+func _commit_power_cost(attack: AttackDef) -> void:
+	var as_power := attack as Power
+	if as_power == null:
+		return
+	power = maxf(power - as_power.power_cost, 0.0)
+	_power_cooldowns[as_power] = as_power.cooldown_seconds
+
+
+func activate_power(attack: AttackDef) -> void:
+	var as_power := attack as Power
+	if as_power != null:
+		as_power.activate(self)
+
+
+## Armour, not invulnerability: hits still land and still hurt, they just stop
+## interrupting. Anything above the threshold breaks through.
+func apply_rampage(ticks: int, armour: float, bonus: float) -> void:
+	_rampage_ticks = maxi(_rampage_ticks, ticks)
+	_rampage_armour = armour
+	_rampage_bonus = bonus
+
+
+func is_rampaging() -> bool:
+	return _rampage_ticks > 0
 
 
 ## Called from AttackState once the cancel window is open. `connected` gates the
@@ -616,6 +669,8 @@ func consume_pending_on_beat() -> bool:
 func begin_attack(attack: AttackDef, on_beat: bool,
 		startup_ticks: int, remainder_ticks: int) -> void:
 	strike_scale = CombatMath.strike_scale(on_beat, flow)
+	if is_rampaging():
+		strike_scale *= 1.0 + _rampage_bonus
 	if _visual == null or not attack.has_animation():
 		return
 	_visual.play_attack(
@@ -725,6 +780,10 @@ func take_hit(result: HitResult) -> void:
 		velocity.x = result.knockback.x
 		velocity.z = result.knockback.z
 		_blockstun = result.hitstun_ticks
+	elif is_rampaging() and result.damage < _rampage_armour:
+		# Absorbed: the damage lands, the interruption does not.
+		velocity.x += result.knockback.x * 0.15
+		velocity.z += result.knockback.z * 0.15
 	else:
 		if _state_id == FighterState.CLIMB:
 			climbing = null
@@ -980,6 +1039,9 @@ func respawn() -> void:
 	flow = 0
 	strike_scale = 1.0
 	_pending_on_beat = false
+	_rampage_ticks = 0
+	# A fresh life should not inherit the last one's cooldowns.
+	_power_cooldowns.clear()
 	if slot != null and slot.source != null:
 		slot.source.stop_rumble()
 	# Drop queued intent as well as state: a fighter should not come back and
@@ -1023,7 +1085,7 @@ func get_state_id() -> StringName:
 
 
 func get_debug_line() -> String:
-	return "%s %-10s %-9s hp %5.1f  pw %5.1f  st %5.1f  flow %d" % [
+	return "%s %-10s %-9s hp %5.1f  pw %5.1f  st %5.1f  flow %d%s" % [
 		slot.get_label() if slot != null else "--",
 		character_def.display_name,
 		_state_id,
@@ -1031,4 +1093,5 @@ func get_debug_line() -> String:
 		power,
 		stamina,
 		flow,
+		"  RAMPAGE" if is_rampaging() else "",
 	]

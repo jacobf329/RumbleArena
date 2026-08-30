@@ -13,9 +13,10 @@ lift, climb, break, or hack is gated by your character's stats.
 stocks each, elimination and a winner. Combat is punch-punch-kick chains ending
 in a fireball, heavy and launcher confirms, grabs that beat a guard, blocking,
 dodging, juggles, knockdowns and wall splats, with timing-based rhythm bonuses.
-The arena is stat-gated: Kurogane rips out concrete pillars and throws them,
-Null hacks the ceiling turrets, Yamabuki climbs the comms tower, and each is
-refused what the others can do. Signature powers and character select are what
+Kurogane and Null have their named powers on the signature and ultimate
+buttons. The arena is stat-gated: Kurogane rips out concrete pillars and throws
+them, Null hacks the ceiling turrets, Yamabuki climbs the comms tower, and each
+is refused what the others can do. Character select and a second arena are what
 remain. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 The same pillar, offered to the fighter who qualifies and refused — with the
@@ -142,6 +143,17 @@ of a move that actually connected, so whiffing a heavy costs you the full
 recovery. **Grab beats block, block beats strike, strike beats grab**; a whiffed
 grab has the longest recovery of any move. Dodge has invulnerability frames and
 costs stamina. Knocking someone into a wall splats them and hands you a juggle.
+
+**Powers** cost meter and go on cooldown, and are charged when you commit — a
+whiffed special still costs you.
+
+| | Signature (RT / Q) | Ultimate (R3 / R) |
+|---|---|---|
+| **Kurogane** | Seismic Palm — a shockwave that cracks the floor into debris he alone can lift | Ogre Rampage — 8s of armour; small hits land but stop interrupting him |
+| **Null** | Blink Strike — teleports behind the nearest fighter and hits their back | System Seize — every turret in the arena turns on everyone but her |
+
+Jinsoku and Yamabuki have no powers yet; their buttons do nothing rather than
+firing someone else's move.
 
 **A match** needs two players and starts on a countdown that restarts whenever
 someone else joins. Three stocks each, last ninja standing wins, and if the

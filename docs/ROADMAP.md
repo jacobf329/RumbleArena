@@ -246,11 +246,39 @@ stat spread worth playing rather than merely worth reading.
 - [x] Fireball cast by the punch-punch-kick chain, paid for out of the meter
 - [x] Grabs and throws, which beat a guard
 - [x] First playtest tuning pass (speed, hit recoil, hitstun)
-- [ ] `Power` base class for the signature and ultimate buttons
-- [ ] Kurogane: Seismic Palm, Ogre Rampage
-- [ ] Null: Blink Strike, System Seize
+- [x] `Power` base class for the signature and ultimate buttons
+- [x] Kurogane: Seismic Palm, Ogre Rampage
+- [x] Null: Blink Strike, System Seize
 - [ ] Arena "The Server Shrine" built to spec (§6 of the GDD)
 - [ ] Character select with join/ready flow
+
+### Powers
+
+`Power` extends `AttackDef` rather than sitting beside it, so a power inherits
+frame data, hitboxes, animation alignment and cancel rules for free and only has
+to describe what makes it special. A power that is purely a strike needs no
+script at all beyond its numbers.
+
+| | Signature | Ultimate |
+|---|---|---|
+| **Kurogane** | **Seismic Palm** (40) — a shockwave that cracks the floor into debris | **Ogre Rampage** (90) — 8s of armour: small hits land but do not interrupt |
+| **Null** | **Blink Strike** (35) — teleports behind the nearest fighter and hits their back | **System Seize** (100) — every turret in the arena answers to her at once |
+
+Jinsoku and Yamabuki have **empty power slots** rather than borrowed ones, so
+their buttons do nothing instead of lying about who they are. Their own powers
+belong to the roster scale-out in M5.
+
+- **Powers resolve before their own hitbox.** Blink Strike repositions the
+  caster, and it has to land the strike from where it arrived rather than from
+  where it started.
+- **Charged on commit, not on connect.** A whiffed special costs you the meter,
+  which is what stops a signature being a free poke.
+- **Ogre Rampage is armour, not invulnerability.** He still takes the damage; he
+  just does not flinch, so chip and spacing stop working and the only answer is
+  to hit him hard enough to break through.
+- **System Seize skips the TECH check** the turret normally applies. The
+  ultimate has already been paid for, and re-testing the stat would only deny it
+  to the one character who can cast it.
 
 ### Match rules
 
@@ -291,6 +319,10 @@ Changes made off the back of actually playing it:
 
 ### What this turned up
 
+- **Debris was being parented to the wrong container.** Seismic Palm spawned its
+  rubble under the fighter's own parent rather than the arena's interactables,
+  where a match reset would have taken it with them. Arenas now expose where
+  dynamically created props belong.
 - **The fireball was paying for itself.** The finisher's own connect credited
   power on the same tick the cost was checked, so the move funded its own
   projectile and the meter meant nothing. The cast now resolves before hits do.
