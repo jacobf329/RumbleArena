@@ -33,6 +33,13 @@ func _run() -> void:
 	await _test_a_bot_goes_where_the_fight_is()
 	await _test_a_bot_falls_for_an_afterimage()
 
+	_section("Using the arena")
+	await _test_a_bot_fetches_something_it_can_lift()
+	await _test_a_bot_ignores_what_it_would_be_refused()
+	await _test_a_bot_throws_what_it_is_carrying()
+	await _test_a_bot_gets_away_from_a_lit_barrel()
+	await _test_a_bot_does_not_hold_a_barrel_to_the_end()
+
 	_section("Leaving the bench")
 	await _test_a_bot_can_be_removed()
 	await _test_removing_a_bot_frees_its_fighter()
@@ -302,6 +309,173 @@ func _test_a_bot_falls_for_an_afterimage() -> void:
 	await _ticks(30)
 
 
+# --- Using the arena ---
+
+## Half the game was the arena, and bots played the other half. Nothing stopped
+## them picking things up except that nobody had told them to, which quietly
+## made every prop a human-only advantage.
+func _test_a_bot_fetches_something_it_can_lift() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	PlayerManager.add_bot(1.0)
+	await _ticks(3)
+	var fighter := _bot_fighter(0)
+
+	# Across the arena, with the prop on the way. Two things this geometry has to
+	# respect: props are scored by how far they add to the trip the bot was
+	# already making, so one behind it is correctly refused; and fetching is a
+	# chance taken every third of a second while the target is still far off, so
+	# the walk has to be long enough for that roll to come up rather than the bot
+	# arriving in punching range first.
+	_human.global_position = Vector3(-12.0, 0.3, 12.0)
+	fighter.global_position = Vector3(12.0, 0.3, 13.0)
+	var crate := _liftable_for(fighter)
+	crate.global_position = Vector3(4.0, 0.3, 12.7)
+	await _ticks(4)
+
+	var picked := false
+	for i in 400:
+		await get_tree().physics_frame
+		if fighter.carried != null:
+			picked = true
+			break
+	_check(picked, "the bot walks over and picks something up")
+	if fighter.carried != null:
+		_check(fighter.carried.can_use(fighter), "and it is something it qualifies for")
+	await _ticks(20)
+
+
+## A bot walking to a pillar it cannot lift would look exactly like a bot that
+## is broken, so the refusal has to happen before the walk, not at the prompt.
+func _test_a_bot_ignores_what_it_would_be_refused() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	var slot := PlayerManager.add_bot(0.5)
+	await _ticks(3)
+	var bot := _bot(0)
+	var fighter := _bot_fighter(0)
+	# Null: STRENGTH 1, so pillars and girders are out of the question.
+	fighter.set_character(CharacterRoster.at(1))
+	await _ticks(3)
+
+	var refused := 0
+	var offered := 0
+	for node in _main.get_node("Arena/Interactables").get_children():
+		var liftable := node as Liftable
+		if liftable == null:
+			continue
+		if bot._worth_fetching(liftable):
+			offered += 1
+		else:
+			refused += 1
+	_check(refused > 0, "there is something in the arena it cannot lift (%d)" % refused)
+	_check(offered > 0, "and something it can (%d)" % offered)
+
+	# Whatever it goes for, it must be one of the ones it qualifies for.
+	fighter.global_position = Vector3(0.0, 0.3, 9.5)
+	_human.global_position = Vector3(-12.0, 0.3, 12.0)
+	await _ticks(4)
+	var to_human: Vector3 = _human.global_position - fighter.global_position
+	var errand: Interactable = bot._find_something_to_carry(
+		Vector3(to_human.x, 0.0, to_human.z))
+	_check(errand == null or errand.can_use(fighter),
+		"it only ever sets out for something it can actually lift")
+	await _ticks(10)
+
+
+func _test_a_bot_throws_what_it_is_carrying() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	PlayerManager.add_bot(0.5)
+	await _ticks(3)
+	var fighter := _bot_fighter(0)
+
+	var crate := _liftable_for(fighter)
+	crate.global_position = fighter.global_position + Vector3(0, 0.4, 0)
+	crate.use(fighter)
+	fighter.carried = crate
+	# Close enough that the arc reaches: a thrown object drops as it flies, and
+	# how far a weak thrower can reach is a separate question from whether the
+	# bot aims at anybody.
+	_human.global_position = fighter.global_position + Vector3(3.2, 0.0, 0.0)
+	_human.velocity = Vector3.ZERO
+	await _ticks(4)
+
+	var health := _human.health
+	var thrown := false
+	for i in 400:
+		await get_tree().physics_frame
+		if fighter.carried == null:
+			thrown = true
+			break
+	_check(thrown, "it does not just stand there holding it")
+
+	for i in 90:
+		await get_tree().physics_frame
+		if _human.health < health - 0.01:
+			break
+	_check(_human.health < health,
+		"and it throws it at somebody (%.1f -> %.1f)" % [health, _human.health])
+	await _ticks(30)
+
+
+## Nothing else in the arena can take a third of your health while you are
+## looking the other way, so getting clear outranks whatever it was doing.
+func _test_a_bot_gets_away_from_a_lit_barrel() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	PlayerManager.add_bot(0.5)
+	await _ticks(3)
+	var fighter := _bot_fighter(0)
+	fighter.global_position = Vector3(-2.0, 0.3, 13.0)
+	_human.global_position = Vector3(-2.0, 0.3, 9.0)
+	await _ticks(4)
+
+	# Lit, held by the human, right next to the bot.
+	var barrel := _spawn_barrel()
+	barrel.global_position = fighter.global_position + Vector3(0.9, 0.4, 0)
+	barrel.use(_human)
+	barrel.carrier = null   # dropped at the bot's feet, still burning
+	await _ticks(4)
+	_check(barrel.is_lit(), "the barrel is burning")
+
+	var before := fighter.global_position.distance_to(barrel.global_position)
+	await _ticks(45)
+	var after := fighter.global_position.distance_to(barrel.global_position)
+	_check(after > before + 1.0,
+		"the bot backs away from it (%.1f m -> %.1f m)" % [before, after])
+	if is_instance_valid(barrel):
+		barrel.queue_free()
+	await _ticks(20)
+
+
+func _test_a_bot_does_not_hold_a_barrel_to_the_end() -> void:
+	_clear_seats()
+	_human = await _join(0)
+	PlayerManager.add_bot(0.5)
+	await _ticks(3)
+	var fighter := _bot_fighter(0)
+	fighter.global_position = Vector3(-2.0, 0.3, 13.0)
+	_human.global_position = Vector3(4.0, 0.3, 13.0)
+	await _ticks(4)
+
+	var barrel := _spawn_barrel()
+	barrel.global_position = fighter.global_position + Vector3(0, 0.4, 0)
+	barrel.use(fighter)
+	fighter.carried = barrel
+	var health := fighter.health
+	await _ticks(2)
+
+	for i in ceili(barrel.fuse_seconds * 60.0) + 30:
+		await get_tree().physics_frame
+		if fighter.carried == null:
+			break
+	_check(fighter.carried == null, "the barrel leaves its hands")
+	_check(fighter.health > health - 1.0,
+		"before the fuse gets it (%.1f -> %.1f)" % [health, fighter.health])
+	await _ticks(40)
+
+
 # --- Leaving the bench ---
 
 func _test_a_bot_can_be_removed() -> void:
@@ -323,12 +497,19 @@ func _test_removing_a_bot_frees_its_fighter() -> void:
 	await _ticks(2)
 	var fighter := _bot_fighter(0)
 	var slot := _bot_slot(0)
+	# Held by id, not by reference: the fighter is about to be freed, and passing
+	# a freed object to anything with a typed parameter fails the cast rather
+	# than answering the question.
+	var fighter_id := fighter.get_instance_id()
+	var framed_before := _camera_targets()
 	PlayerManager.remove_bot()
 	await _ticks(4)
 
 	_check(not is_instance_valid(fighter), "the bot's fighter is gone from the arena")
 	_check(slot.fighter == null, "the seat is not holding a dangling fighter")
-	_check(not _camera_frames(fighter), "the camera stopped framing it")
+	_check(not _camera_frames(fighter_id), "the camera stopped framing it")
+	_check(_camera_targets() < framed_before,
+		"and it is one target lighter (%d -> %d)" % [framed_before, _camera_targets()])
 
 
 ## Otherwise pulling a bot out mid-match would leave a ghost that the
@@ -435,6 +616,34 @@ func _test_a_rematch_does_not_strand_the_bots() -> void:
 
 # --- Helpers ---
 
+## Something this fighter is strong enough to pick up, spawning one rather than
+## returning null.
+##
+## Never null on purpose. Whether a given prop is free depends on what the checks
+## before this one left mid-flight or in somebody's hands -- and a null here does
+## not fail the suite, it hangs it: a runtime error inside an awaited coroutine
+## aborts that function without ever resuming its caller, so the run stops dead
+## with nothing reported. An ordering dependency is not worth that.
+func _liftable_for(fighter: Fighter) -> Liftable:
+	for node in _main.get_node("Arena/Interactables").get_children():
+		var liftable := node as Liftable
+		if liftable != null and liftable is not ExplosiveBarrel \
+				and liftable.can_use(fighter) and liftable.is_offered(fighter):
+			return liftable
+	# Debris is mass class 1, liftable by anybody including STRENGTH 1.
+	var spawned: Liftable = preload("res://scenes/interactables/debris.tscn").instantiate()
+	(_main.get_node("Arena") as Arena).interactable_root().add_child(spawned)
+	spawned.global_position = fighter.global_position + Vector3(1.5, 0.3, 0)
+	return spawned
+
+
+
+func _spawn_barrel() -> ExplosiveBarrel:
+	var barrel: ExplosiveBarrel = preload("res://scenes/interactables/barrel.tscn").instantiate()
+	(_main.get_node("Arena") as Arena).interactable_root().add_child(barrel)
+	return barrel
+
+
 func _bot_slot(nth: int) -> PlayerSlot:
 	var found := 0
 	for slot: PlayerSlot in PlayerManager.slots:
@@ -455,11 +664,21 @@ func _bot_fighter(nth: int) -> Fighter:
 	return slot.fighter as Fighter if slot != null else null
 
 
-func _camera_frames(fighter: Fighter) -> bool:
+## Takes a plain Node3D: it is called with a fighter that has just been freed,
+## and a typed parameter refuses the cast rather than answering the question.
+func _camera_frames(fighter_id: int) -> bool:
 	for target in _camera._targets:
-		if target == fighter:
+		if is_instance_valid(target) and target.get_instance_id() == fighter_id:
 			return true
 	return false
+
+
+func _camera_targets() -> int:
+	var live := 0
+	for target in _camera._targets:
+		if is_instance_valid(target):
+			live += 1
+	return live
 
 
 ## Empties every seat between sections, so one section's bench does not decide

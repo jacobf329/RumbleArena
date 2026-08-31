@@ -45,6 +45,16 @@ func _ready() -> void:
 		_mesh.material_override = _material
 
 
+## Lit and counting down. Anything that wants to get away from one -- an AI, a
+## future warning marker -- needs to be able to ask rather than infer.
+func is_lit() -> bool:
+	return _lit and not _detonated
+
+
+func fuse_left() -> float:
+	return _fuse if _lit else fuse_seconds
+
+
 func use(fighter: Node3D) -> bool:
 	if not super(fighter):
 		return false

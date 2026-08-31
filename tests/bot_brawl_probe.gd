@@ -15,6 +15,9 @@ extends TestHarness
 var _spreads: Array[float] = []
 var _wedged := {}
 var _wedge_spot := {}
+var _carrying := {}
+var _pickups := 0
+var _throws := 0
 
 
 func _init() -> void:
@@ -60,6 +63,21 @@ func _run() -> void:
 				_wedged[slot.get_label()] = _wedged.get(slot.get_label(), 0) + 1
 				_wedge_spot[slot.get_label()] = stuck.global_position
 
+		# Props actually used, not just props reachable. Tuning the fetch rule
+		# until the brawl metrics looked healthy could equally have meant tuning
+		# it until bots never touched anything.
+		for slot: PlayerSlot in PlayerManager.get_active_slots():
+			var hands := slot.fighter as Fighter
+			if hands == null:
+				continue
+			var held: bool = hands.carried != null
+			var was: bool = _carrying.get(slot.get_label(), false)
+			if held and not was:
+				_pickups += 1
+			elif was and not held:
+				_throws += 1
+			_carrying[slot.get_label()] = held
+
 		if i % 6 != 0:
 			continue
 		samples += 1
@@ -88,6 +106,7 @@ func _run() -> void:
 		% (100.0 * _above(20.0)))
 	print("  mean camera distance %.1f m" % (distance_sum / maxf(samples, 1)))
 	print("  fighters mid-attack per sample %.2f" % (float(attacking) / maxf(samples, 1)))
+	print("  props picked up %d, thrown %d" % [_pickups, _throws])
 	print("  wedged ticks %s" % _wedged)
 	print("  last wedge spots %s" % _wedge_spot)
 	print("  phase after: %s" % match_manager.phase_name())

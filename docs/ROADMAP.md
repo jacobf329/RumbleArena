@@ -486,6 +486,51 @@ Props added at the same time:
   friendly-fire exemption; it is the one object here that does not care whose
   it was.
 
+## Bots that use the arena
+
+Half the game was the arena, and bots played the other half. Nothing stopped
+them picking things up except that nobody had told them to, which quietly made
+every prop a human-only advantage -- the exact opposite of what pillar P2 is
+for. They now fetch what they qualify for and throw it at whoever they are
+fighting, throw a carried barrel before the fuse gets them, and walk away from
+somebody else's.
+
+Two things fell out of it, one of them a bug in the game rather than the AI:
+
+- **A thrown object hit the thrower.** It leaves your hands 0.9m in front of
+  your chest and its 0.7m contact sphere still reaches back inside your own
+  hurtbox, so every throw connected with the person who threw it on its first
+  or second frame and dropped at their feet. The existing "a thrown pillar
+  hurts" test passed by about three centimetres of geometry -- the one staged
+  throw in the suite happened to start just outside the sphere. A throw now
+  ignores its thrower for 0.4s, a window rather than an exemption so that
+  throwing something straight up still lands it on your own head.
+- **The first version of fetching wrecked the game.** Scoring props by "is it
+  near me" sent four bots orbiting the corners: the fight was spread over
+  twenty metres a hundred percent of the match and they attacked a third as
+  often. Props are scored by how far they add to the trip the bot was already
+  making, so one between it and its target is nearly free and one behind it is
+  not worth having. Back to 5-14% and roughly the old attack rate.
+
+Neither showed up in a test. The first hid behind a passing assertion; the
+second only exists as a shape you can see in aggregate. `bot_brawl_probe`
+caught the second within a minute of running it, and now also counts props
+picked up and thrown -- because tuning a fetch rule until the brawl metrics
+look healthy could equally mean tuning it until bots never touch anything.
+
+Two things about the suite itself came out of this:
+
+- **A parse error in a test hangs the run rather than failing it.** Renaming a
+  bot method left one call site with the wrong arity; the test script would not
+  compile, the awaited coroutine never resumed, and the suite sat there
+  reporting nothing for a quarter of an hour. Worth knowing the signature: a
+  suite that stops printing has usually not got slow, it has died.
+- **Test helpers that can return null are the same hazard.** A null dereference
+  inside an awaited coroutine aborts that function without resuming its caller,
+  so it hangs too. The helper that finds a liftable now spawns one rather than
+  returning null, because whether a given prop is free depends on what the
+  checks before it left mid-flight.
+
 ## Air attacks, and why throwing still looked broken
 
 - **Jump kick** (light, airborne) carries you forward, and further if you were

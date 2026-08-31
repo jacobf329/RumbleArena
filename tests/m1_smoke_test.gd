@@ -475,8 +475,14 @@ func _release_key(key: Key) -> void:
 # --- Local helpers ---
 
 func _place(fighter: Fighter, position: Vector3) -> void:
-	_source(fighter).release_all()
-	_source(fighter).move = Vector2.ZERO
+	# Guarded: the gamepad checks in this suite put a real GamepadInputSource in
+	# a seat, and _source only answers for scripted ones. Unguarded this threw
+	# on every placement after those ran -- harmless to the assertions, and
+	# exactly the kind of standing error that hides the next real one.
+	var source := _source(fighter)
+	if source != null:
+		source.release_all()
+		source.move = Vector2.ZERO
 	fighter.global_position = position
 	fighter.velocity = Vector3.ZERO
 	await _ticks(30)

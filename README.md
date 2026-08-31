@@ -295,10 +295,10 @@ it, so the freeze never eats your timing.
   something is in the way they notice they have stopped, jump, and go round.
   That clears the ramps and pillars most of the time; expect to see a CPU scuff
   along a platform edge for a second before it works out the detour.
-- **Bots ignore the arena.** They do not climb, throw crates, or hack turrets
-  yet, so the interactables are still a human advantage. They *do* fall for
-  Jinsoku's afterimage, which was the one piece worth wiring in: a decoy that
-  only fooled humans would have been half a power.
+- **Bots use the props but not the verticality.** They fetch and throw things
+  they qualify for, throw a lit barrel before it goes off, and get out of the
+  way of somebody else's — but they do not climb or hack, so the tower and the
+  turrets are still a human advantage. They also fall for Jinsoku's afterimage.
 - **Four of the eight ninjas in the design document exist.** Shirayuki,
   Kagerou, Raiden-Maru and Mokushi are written up but not built.
 - `rigify_clip.glb` imports as 0.07s despite being 3.03s in the source, so it is
@@ -332,7 +332,7 @@ bug.
 
 The normal run imports the project to surface script and scene parse errors,
 then runs the suites: 77 movement/input/camera, 143 combat, 79 interaction, 40
-match-flow and 52 bot checks — 391 in all. Every test
+match-flow and 65 bot checks — 404 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

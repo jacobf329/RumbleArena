@@ -15,6 +15,17 @@ const DAMAGE_PER_MASS := 7.0
 const KNOCKBACK_PER_MASS := 4.0
 ## A throw that has travelled this long gives up and drops.
 const MAX_FLIGHT := 3.0
+## How long a throw ignores the person who threw it.
+##
+## An object leaves your hands 0.9m in front of your chest, and its 0.7m contact
+## sphere still reaches back inside your own hurtbox from there -- so without
+## this, every throw hit the thrower on its first or second frame and dropped at
+## their feet. The existing test for "a thrown pillar hurts" passed by about
+## three centimetres of geometry.
+##
+## A window rather than a permanent exemption, so a throw straight up still
+## lands on the head of whoever launched it.
+const THROWER_GRACE := 0.4
 
 signal thrown(by: Node3D)
 signal landed()
@@ -27,6 +38,7 @@ var _velocity := Vector3.ZERO
 var _flying := false
 var _flight_time := 0.0
 var _hit_targets: Array = []
+var _thrower: Node3D = null
 var _home: Node = null
 
 @onready var _body_shape: CollisionShape3D = $Body/Collision
@@ -74,6 +86,7 @@ func throw_from(fighter: Node3D) -> void:
 		strength = CombatMath.offense(definition.stat_strength)
 
 	carrier = null
+	_thrower = fighter
 	_flying = true
 	_flight_time = 0.0
 	_hit_targets.clear()
@@ -91,6 +104,8 @@ func _advance_flight(delta: float) -> void:
 
 	for target in _overlapping_fighters():
 		if _hit_targets.has(target):
+			continue
+		if target == _thrower and _flight_time < THROWER_GRACE:
 			continue
 		_hit_targets.append(target)
 		_strike(target)

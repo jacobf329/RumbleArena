@@ -36,6 +36,49 @@ const STALL_SPEED := 1.4
 ## How long it commits to going around after a stall.
 const DETOUR_TIME := 0.8
 
+# The arena is half the game, and until now bots played the other half. Nothing
+# stopped them picking things up except that nobody had told them to, which
+# quietly made every prop a human-only advantage -- the exact opposite of what
+# "the arena is a weapon" is for.
+## How far a bot will leave a fight to go and fetch something.
+const FETCH_RANGE := 8.0
+## Below this it just punches: walking to a crate to throw at somebody standing
+## next to you is worse than hitting them.
+const FETCH_WORTH_IT := 5.5
+## Extra metres a bot will walk, over and above going straight at its target, to
+## pick something up on the way.
+##
+## Measured as a detour rather than as "is it near me", because near me and
+## behind me is the whole arena's width away from the fight. The first version
+## scored on proximity alone and four bots spent an entire match orbiting props
+## at opposite corners: the fight was spread over twenty metres a hundred
+## percent of the time, and they attacked a third as often.
+const MAX_DETOUR := 4.5
+## Chance of bothering at all when the timer comes round. A bot that fetched
+## every time it could would be a bot that never fights.
+const FETCH_CHANCE := 0.35
+## Quiet period after a throw, so it does not immediately go looking again.
+const FETCH_REST := 4.0
+## Seconds between looking around for something to pick up. Short on purpose:
+## the scan is a handful of children, and a long cooldown does not save anything
+## worth having -- it just means that after one look that found nothing, the bot
+## spends the next few seconds walking out of range of the crate it would have
+## picked up, and never comes back for it.
+const FETCH_INTERVAL := 0.35
+## How far it will throw.
+const THROW_RANGE := 11.0
+## How squarely it has to be facing before it lets go. 0.86 is thirty degrees
+## of error, which over even three metres is a clean miss -- and since the bot
+## walks at its target while carrying, waiting for a tighter line costs it
+## almost nothing.
+const THROW_AIM := 0.97
+## It throws anyway after this long, rather than shuffling for a perfect line.
+const CARRY_PATIENCE := 3.0
+## Fuse remaining below which a carried barrel goes NOW, aimed or not.
+const PANIC_FUSE := 1.1
+## Clearance kept from somebody else's lit barrel.
+const BLAST_MARGIN := 1.4
+
 var fighter: Fighter
 ## 0 is a punching bag, 1 is genuinely irritating. Drives reaction time, how
 ## often it guards, and how close its combo timing gets to the rhythm window.
@@ -65,6 +108,9 @@ var _strafe := 1.0
 var _strafe_timer := 0.0
 var _stall := 0.0
 var _detour := 0.0
+var _fetch_timer := 0.0
+var _carry_timer := 0.0
+var _errand: Interactable = null
 var _desired_move := Vector2.ZERO
 var _tap_queue: Array[InputFrame.Action] = []
 var _holds: Dictionary = {}
@@ -108,6 +154,7 @@ func _think(delta: float) -> void:
 		_holds[action] = maxi(_holds[action] - 1, 0)
 
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	_fetch_timer = maxf(_fetch_timer - delta, 0.0)
 	_reaction = maxf(_reaction - delta, 0.0)
 	_retarget = maxf(_retarget - delta, 0.0)
 	_strafe_timer = maxf(_strafe_timer - delta, 0.0)
@@ -130,6 +177,17 @@ func _think(delta: float) -> void:
 	var offset := _target.global_position - fighter.global_position
 	var flat := Vector3(offset.x, 0.0, offset.z)
 	var distance := flat.length()
+
+	# Getting clear of a live barrel outranks everything, including whatever it
+	# was in the middle of. Nothing else in the arena can take a third of your
+	# health while you are looking the other way.
+	if _avoid_blasts():
+		_check_for_a_wall(delta)
+		return
+
+	if _handle_errands(delta, flat, distance):
+		_check_for_a_wall(delta)
+		return
 
 	_move_toward(flat, distance)
 	_check_for_a_wall(delta)
@@ -161,6 +219,129 @@ func _move_toward(flat: Vector3, distance: float) -> void:
 		direction = (direction * closing + sideways * 0.7).normalized()
 
 	_desired_move = fighter.to_input_space(direction)
+
+
+# --- Using the arena ---
+
+## Walks away from anybody else's lit barrel. Its own is a weapon, not a hazard.
+func _avoid_blasts() -> bool:
+	var escape := Vector3.ZERO
+	for node in fighter.get_tree().get_nodes_in_group(&"barrels"):
+		var barrel := node as ExplosiveBarrel
+		if barrel == null or not is_instance_valid(barrel) or not barrel.is_lit():
+			continue
+		if barrel.carrier == fighter:
+			continue
+		var offset := fighter.global_position - barrel.global_position
+		var flat := Vector3(offset.x, 0.0, offset.z)
+		if flat.length() > barrel.blast_radius + BLAST_MARGIN:
+			continue
+		if flat.length_squared() < 0.01:
+			flat = fighter.get_facing_direction()
+		escape += flat.normalized()
+
+	if escape == Vector3.ZERO:
+		return false
+	_desired_move = fighter.to_input_space(escape.normalized())
+	return true
+
+
+## Fetching something to throw, and throwing it. Returns whether the errand owns
+## this tick's movement and interact button.
+func _handle_errands(delta: float, to_target: Vector3, distance: float) -> bool:
+	if fighter.carried != null:
+		_carry_timer += delta
+		return _throw_it(to_target, distance)
+
+	_carry_timer = 0.0
+	if not _worth_fetching(_errand):
+		_errand = null
+	# Stalled on the way: the errand path does its own steering, so it cannot
+	# use the detour the wall check sets up. Something is between the bot and
+	# the prop, and standing there shoving at it is worse than forgetting it.
+	if _detour > 0.0:
+		_errand = null
+		_fetch_timer = FETCH_REST
+		return false
+
+	if _errand == null:
+		if _fetch_timer > 0.0 or distance < FETCH_WORTH_IT:
+			return false
+		_fetch_timer = FETCH_INTERVAL
+		if randf() > FETCH_CHANCE * (0.5 + skill):
+			return false
+		_errand = _find_something_to_carry(to_target)
+		if _errand == null:
+			return false
+
+	# Walk to it, and take it the moment the fighter's own probe agrees it is in
+	# reach -- the same signal the prompt above a player's head is reading.
+	var reach := _errand.global_position - fighter.global_position
+	_desired_move = fighter.to_input_space(Vector3(reach.x, 0.0, reach.z).normalized())
+	if fighter.interaction_target == _errand:
+		_tap(InputFrame.Action.INTERACT)
+		_errand = null
+	return true
+
+
+func _throw_it(to_target: Vector3, distance: float) -> bool:
+	var barrel := fighter.carried as ExplosiveBarrel
+	var panicking := barrel != null and barrel.fuse_left() < PANIC_FUSE
+
+	# Line up on the target: the fighter faces where it is walking, so aiming and
+	# closing are the same action.
+	var aim := Vector3(to_target.x, 0.0, to_target.z)
+	if aim.length_squared() > 0.0001:
+		_desired_move = fighter.to_input_space(aim.normalized())
+
+	var facing: Vector3 = fighter.get_facing_direction()
+	var squared_up := aim.length_squared() > 0.0001 \
+		and facing.dot(aim.normalized()) > THROW_AIM
+	var in_range := distance < THROW_RANGE
+
+	if panicking or _carry_timer > CARRY_PATIENCE or (squared_up and in_range):
+		_tap(InputFrame.Action.INTERACT)
+		_carry_timer = 0.0
+		_fetch_timer = FETCH_REST
+	return true
+
+
+## The best thing to pick up on the way to the fight.
+##
+## Nothing already in somebody else's hands, and nothing this bot would be
+## refused -- walking to a pillar it cannot lift would look exactly like a bot
+## that is broken. Scored by how far it adds to the trip it was already making,
+## so a crate directly between it and its target is nearly free and one behind
+## it is not worth having.
+func _find_something_to_carry(to_target: Vector3) -> Interactable:
+	var here: Vector3 = fighter.global_position
+	var there := here + to_target
+	var direct := to_target.length()
+
+	var best: Interactable = null
+	var best_detour := MAX_DETOUR
+	for node in fighter.get_tree().get_nodes_in_group(&"arena"):
+		var arena := node as Arena
+		if arena == null:
+			continue
+		for child in arena.interactable_root().get_children():
+			var liftable := child as Liftable
+			if liftable == null or not _worth_fetching(liftable):
+				continue
+			var at: Vector3 = liftable.global_position
+			if here.distance_to(at) > FETCH_RANGE:
+				continue
+			var detour := here.distance_to(at) + at.distance_to(there) - direct
+			if detour < best_detour:
+				best_detour = detour
+				best = liftable
+	return best
+
+
+func _worth_fetching(thing: Interactable) -> bool:
+	if thing == null or not is_instance_valid(thing):
+		return false
+	return thing.is_offered(fighter) and thing.can_use(fighter)
 
 
 ## Asking to move and not moving means something is in the way.
