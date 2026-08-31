@@ -105,6 +105,24 @@ func stop_rumble() -> void:
 	Input.stop_joy_vibration(device)
 
 
+const BUTTON_NAMES := {
+	InputFrame.Action.JUMP: "A",
+	InputFrame.Action.LIGHT: "X",
+	InputFrame.Action.HEAVY: "Y",
+	InputFrame.Action.GRAB: "B",
+	InputFrame.Action.INTERACT: "B",
+	InputFrame.Action.BLOCK: "LB",
+	InputFrame.Action.LAUNCHER: "RB",
+	InputFrame.Action.ULTIMATE: "R3",
+	InputFrame.Action.DODGE: "LT",
+	InputFrame.Action.SIGNATURE: "RT",
+}
+
+
+func button_hint(action: InputFrame.Action) -> String:
+	return BUTTON_NAMES.get(action, "")
+
+
 func get_display_name() -> String:
 	var pad_name := Input.get_joy_name(device)
 	return pad_name if pad_name != "" else "Gamepad %d" % device

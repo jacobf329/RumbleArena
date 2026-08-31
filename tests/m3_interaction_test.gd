@@ -36,6 +36,7 @@ func _run() -> void:
 	await _test_carrying_prevents_attacking()
 	await _test_a_thrown_pillar_hurts()
 	await _test_the_pad_button_lifts_and_throws()
+	await _test_the_prompt_names_the_button()
 	await _test_dying_returns_what_you_carried()
 	await _test_the_strength_ladder_has_no_gaps()
 
@@ -204,6 +205,47 @@ func _test_the_pad_button_lifts_and_throws() -> void:
 		"and that one does not swing either")
 	await _ticks(40)
 	await _park(_kurogane)
+
+
+## A prompt that says what you can do and not which button does it is how you
+## end up with a player who can pick things up and has no idea they can put them
+## down again. The hint comes from the seat's own device, because four seats can
+## be on four different devices at once and naming the wrong button is worse
+## than naming none.
+func _test_the_prompt_names_the_button() -> void:
+	var pillar := _pillar()
+	pillar.release()
+	await _stand_at(_kurogane, pillar)
+
+	var pad := GamepadInputSource.new(0)
+	var keys := KeyboardInputSource.new()
+	_check(pad.button_hint(InputFrame.Action.INTERACT) == "B",
+		"a pad calls interact B")
+	_check(keys.button_hint(InputFrame.Action.INTERACT) == "E",
+		"a keyboard calls it E")
+
+	# The seat here is scripted, which is neither, so it must not invent one.
+	_check(_source(_kurogane).button_hint(InputFrame.Action.INTERACT) == "",
+		"a source with no buttons offers no hint")
+
+	# Swap in a real device and the prompt should say so, both offered and held.
+	var original := _kurogane.slot.source
+	_kurogane.slot.source = pad
+	await _ticks(2)
+	var offered := _kurogane.get_node("Prompt") as Label3D
+	_check(offered.text.begins_with("[B] "),
+		"the lift prompt names the button: '%s'" % offered.text)
+
+	_kurogane.carried = pillar
+	pillar.carrier = _kurogane
+	await _ticks(2)
+	_check(offered.text.begins_with("[B] Throw"),
+		"and so does the throw prompt: '%s'" % offered.text)
+
+	pillar.release()
+	_kurogane.carried = null
+	_kurogane.slot.source = original
+	await _ticks(4)
 
 
 func _test_dying_returns_what_you_carried() -> void:

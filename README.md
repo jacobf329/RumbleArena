@@ -191,6 +191,13 @@ your controller does and has no other way to touch the game.
 
 F5 returns everyone to their spawn.
 
+**In the air**, the same two attack buttons are different moves: light is a
+**jump kick** that carries you forward — an approach tool, and further still if
+you were already running — and heavy is a **slam** that fires you at the floor
+and bursts on impact, catching anyone standing near where you land. The slam
+stays live the whole way down, so somebody walking underneath mid-descent still
+gets hit.
+
 Light chains **punch, punch, kick** — and the kick throws a **fireball** if the
 blue meter can pay for it. Heavy and launcher are confirms that only cancel out
 of a move that actually connected, so whiffing a heavy costs you the full
@@ -242,6 +249,12 @@ Each specialist owns exactly one verb nobody else has. The tower is 7 metres —
 past any double jump — so what sits on top of it is reachable one way only.
 
 **Pick something up with interact (B / E), and press it again to throw.** The
+prompt above your ninja names the button on your own device, so a pad seat and
+a keyboard seat in the same match each see the right one.
+
+![Throwing a pillar](docs/images/m3-throw-prompt.png)
+
+The
 weight ladder runs 1 to 5 so every ninja has something they can throw and
 something they are refused; the girder exists so Kurogane's STRENGTH 5 means
 something the pillars alone did not.
@@ -318,8 +331,8 @@ first step is an import pass — which builds the very cache whose absence is th
 bug.
 
 The normal run imports the project to surface script and scene parse errors,
-then runs the suites: 77 movement/input/camera, 132 combat, 74 interaction, 40
-match-flow and 52 bot checks — 375 in all. Every test
+then runs the suites: 77 movement/input/camera, 143 combat, 79 interaction, 40
+match-flow and 52 bot checks — 391 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

@@ -486,6 +486,39 @@ Props added at the same time:
   friendly-fire exemption; it is the one object here that does not care whose
   it was.
 
+## Air attacks, and why throwing still looked broken
+
+- **Jump kick** (light, airborne) carries you forward, and further if you were
+  already running. **Slam** (heavy, airborne) fires you at the floor rather than
+  dropping you toward it, and bursts on impact. It holds its active window open
+  for the whole descent, so a dive whose target moved is still a live attack
+  instead of a fighter falling with an animation attached.
+- The kick's forward drive was eaten by attack drift on the first try -- 5.2 m/s
+  of lunge became half a metre of travel. Attack drift exists to stop a
+  *grounded* fighter sliding out of a lunge; in the air it simply deletes the
+  jump-in. An airborne step now keeps its momentum, reusing the same protection
+  the grapple and the haul needed. Third time that trap has come up, and the
+  first time the fix was already sitting there.
+
+Throwing had been fixed once and still read as broken, for two reasons that had
+nothing to do with the throw:
+
+- **The prompt named the action and never the button.** "Throw Concrete Pillar"
+  tells you something is possible and not how to do it. It now reads
+  "[B] Throw Concrete Pillar", asked of the seat's own device rather than
+  hardcoded -- four seats can be on four different devices at once, and naming
+  the wrong button is worse than naming none.
+- **Character select covered it completely.** The select prompt won outright
+  over the interaction prompt, so through the entire warm-up -- exactly when
+  people pick something up for the first time -- the "Throw" line was never on
+  screen. They share the space now, contextual line first.
+
+One process note: the edit that was supposed to fix the second of those did
+nothing. A string replace missed on a line with mangled whitespace and failed
+silently, the test passed anyway because it runs with character select disabled,
+and only running the actual game showed the prompt unchanged. A test that agrees
+with a change which was never applied is worth less than one look at the screen.
+
 ## Two installs that looked like a broken game
 
 The same failure has now shipped twice, and it is worth writing down because

@@ -27,6 +27,18 @@ func get_display_name() -> String:
 	return "Unassigned"
 
 
+## What this device calls the button for an action, for prompts like
+## "[B] Throw Concrete Pillar".
+##
+## Asked of the source rather than hardcoded in the HUD because four seats can
+## be on four different devices at once, and a prompt that named the wrong
+## button would be worse than naming none -- which is what it did before, and is
+## how you end up with a player who can pick things up and has no idea they can
+## put them down again.
+func button_hint(_action: InputFrame.Action) -> String:
+	return ""
+
+
 func get_device_id() -> int:
 	return KEYBOARD_DEVICE
 

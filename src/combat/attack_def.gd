@@ -48,6 +48,20 @@ extends Resource
 @export var fireball_speed: float = 13.0
 @export var fireball_knockback: float = 8.0
 
+@export_group("Aerial")
+## Downward speed driven into the fighter as the hitbox opens. A slam does not
+## fall, it is fired at the floor.
+@export var dive_speed: float = 0.0
+## Holds the active window open for the whole descent and bursts on impact,
+## rather than expiring in mid-air. Without this a dive whose target moved is
+## just a fighter falling with a recovery animation attached.
+@export var slams_on_landing: bool = false
+@export var slam_radius: float = 3.0
+@export var slam_damage: float = 9.0
+@export var slam_knockback: float = 11.0
+@export var slam_launch_angle: float = 46.0
+@export var slam_hitstun: int = 30
+
 @export_group("Grab")
 ## Seizes the victim rather than striking them: ignores blocking, holds them
 ## through the animation, then throws them. Grab beats block, block beats

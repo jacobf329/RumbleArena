@@ -18,6 +18,8 @@ var _hit_targets: Array = []
 ## The fighter currently held by a grab, if this move is one.
 var _grabbed: Node = null
 var _fired := false
+## A slam that has been launched and has not hit the ground yet.
+var _slam_pending := false
 
 
 func get_id() -> StringName:
@@ -43,6 +45,7 @@ func enter(_previous: StringName) -> void:
 	_hit_targets.clear()
 	_grabbed = null
 	_fired = false
+	_slam_pending = _attack.slams_on_landing and not fighter.is_on_floor()
 	fighter.attacks_started += 1
 	fighter.begin_attack(_attack, _on_beat, _startup, _active + _recovery)
 
@@ -56,6 +59,11 @@ func physics_update(delta: float) -> StringName:
 	if _tick == _startup and not _stepped:
 		_stepped = true
 		fighter.apply_step(_attack.step_forward)
+		if _attack.dive_speed > 0.0 and not fighter.is_on_floor():
+			# Straight down, horizontal momentum discarded. A slam you could
+			# steer mid-descent would be a better approach tool than the jump
+			# kick, which is the move that is supposed to cover ground.
+			fighter.velocity = Vector3(0.0, -_attack.dive_speed, 0.0)
 
 	# Cast before resolving hits, not after. The other way round, the finisher's
 	# own connect credited power on the same tick the cost was checked, so the
@@ -72,6 +80,15 @@ func physics_update(delta: float) -> StringName:
 
 	if _grabbed != null:
 		_carry_grabbed()
+
+	if _slam_pending and _tick >= _startup:
+		if fighter.is_on_floor():
+			_slam_pending = false
+			fighter.slam_impact(_attack)
+		else:
+			# Pinned to the first active frame, so the hitbox stays live the
+			# whole way down instead of the move timing out in the air.
+			_tick = _startup
 
 	_tick += 1
 

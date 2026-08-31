@@ -36,6 +36,8 @@ const HITSTUN_DRAG := 4.0
 const INTERACT_REACH := 1.7
 ## How much control an attack leaves you: almost none.
 const ATTACK_DRIFT_DRAG := 30.0
+## How long an airborne lunge keeps the momentum it was given.
+const AIR_STEP_PROTECT_TICKS := 16
 
 signal damaged(result: HitResult)
 signal defeated()
@@ -306,20 +308,45 @@ func _speed_multiplier() -> float:
 func _update_prompt() -> void:
 	if _prompt == null:
 		return
-	if select_prompt != "":
-		_prompt.text = select_prompt
-		_prompt.modulate = Color(1, 1, 1) if select_prompt.begins_with("READY") \
-			else Color(0.86, 0.9, 1.0)
-	elif carried != null:
-		_prompt.text = "Throw %s" % carried.display_name
-		_prompt.modulate = Color(0.85, 0.95, 1.0)
+
+	# Interaction goes above character select rather than instead of it. Select
+	# used to win outright, which meant that through the whole warm-up -- exactly
+	# when people are picking things up for the first time -- the "Throw" line was
+	# never on screen at all. Two lines, contextual first: what is in front of you
+	# right now beats a reminder of a menu that has not changed.
+	var lines: Array[String] = []
+	var colour := Color(0.86, 0.9, 1.0)
+
+	if carried != null:
+		lines.append("%sThrow %s" % [_interact_hint(), carried.display_name])
+		colour = Color(0.85, 0.95, 1.0)
 	elif interaction_target != null:
-		_prompt.text = interaction_target.prompt_text(self)
+		var allowed: bool = interaction_target.can_use(self)
+		lines.append("%s%s" % [
+			_interact_hint() if allowed else "",
+			interaction_target.prompt_text(self),
+		])
 		# Refusals are dimmed rather than hidden: learning what you cannot do is
 		# how you learn what the other ninjas can.
-		_prompt.modulate = Color(0.9, 1.0, 0.9) if interaction_target.can_use(self) 			else Color(0.62, 0.60, 0.58)
-	else:
-		_prompt.text = ""
+		colour = Color(0.9, 1.0, 0.9) if allowed else Color(0.62, 0.60, 0.58)
+
+	if select_prompt != "":
+		lines.append(select_prompt)
+		if lines.size() == 1:
+			colour = Color(1, 1, 1) if select_prompt.begins_with("READY") else Color(0.86, 0.9, 1.0)
+
+	_prompt.text = "\n".join(lines)
+	_prompt.modulate = colour
+
+
+
+## The button this seat presses to interact, as "[B] ". Empty for a bot, and
+## empty when the seat has no device -- a prompt should never invent a button.
+func _interact_hint() -> String:
+	if slot == null or slot.source == null:
+		return ""
+	var hint := slot.source.button_hint(InputFrame.Action.INTERACT)
+	return "[%s] " % hint if hint != "" else ""
 
 
 ## Attacks drive their own clip from begin_attack; reactions hold whatever pose
@@ -528,6 +555,12 @@ func apply_air_acceleration(direction: Vector3, delta: float) -> void:
 ## actually goes where it was aimed.
 func apply_launch(launch_velocity: Vector3, ticks: int) -> void:
 	velocity = launch_velocity
+	protect_momentum(ticks)
+
+
+## Keeps the damping systems off whatever the fighter is already doing, without
+## replacing it.
+func protect_momentum(ticks: int) -> void:
 	_launch_ticks = maxi(_launch_ticks, ticks)
 
 
@@ -557,6 +590,12 @@ func apply_step(distance: float) -> void:
 	var step := get_facing_direction() * distance
 	velocity.x += step.x
 	velocity.z += step.z
+	if not is_on_floor():
+		# Attack drift exists to stop a grounded fighter sliding out of a lunge,
+		# and on the floor that is right. In the air it simply deletes the
+		# jump-in: a kick authored to cross five metres travelled half of one,
+		# because 30 m/s^2 of drag had the whole arc to work with.
+		protect_momentum(AIR_STEP_PROTECT_TICKS)
 
 
 func face_movement(direction: Vector3, delta: float) -> void:
@@ -860,6 +899,49 @@ func deal_hit(attack: AttackDef, target: Node) -> bool:
 	power = minf(power + attack.power_gain, max_power)
 	apply_hitstop(result.hitstop_ticks)
 	return true
+
+
+## A slam landing: everything close enough to the impact is thrown off its feet.
+##
+## Separate from the move's own hitbox because the two answer different
+## questions -- the hitbox is what you caught on the way down, this is what the
+## floor does when you arrive. A dive that connects mid-air does both.
+func slam_impact(attack: AttackDef) -> void:
+	for node in get_tree().get_nodes_in_group(&"fighters"):
+		var victim := node as Fighter
+		if victim == null or victim == self or victim.is_eliminated:
+			continue
+		if victim.is_invulnerable():
+			continue
+		var offset := victim.global_position - global_position
+		var flat := Vector3(offset.x, 0.0, offset.z)
+		if flat.length() > attack.slam_radius or absf(offset.y) > 2.4:
+			continue
+		if flat.length_squared() < 0.01:
+			flat = get_facing_direction()
+
+		var radians := deg_to_rad(attack.slam_launch_angle)
+		var direction := (flat.normalized() * cos(radians) + Vector3.UP * sin(radians)).normalized()
+		var scale := CombatMath.offense(character_def.stat_strength) \
+			/ CombatMath.defense(victim.character_def.stat_toughness)
+
+		var result := HitResult.new()
+		result.attacker = self
+		result.attack = attack
+		result.damage = attack.slam_damage * CombatMath.offense(character_def.stat_strength)
+		result.knockback = direction * attack.slam_knockback * scale
+		result.hitstun_ticks = attack.slam_hitstun
+		result.hitstop_ticks = 8
+		result.position = victim.global_position + Vector3.UP
+		victim.take_hit(result)
+		power = minf(power + attack.power_gain, max_power)
+
+	HitSpark.spawn(get_tree().current_scene, global_position + Vector3.UP * 0.25,
+		Color(1.0, 0.85, 0.55), attack.slam_damage * 1.4)
+	apply_hitstop(6)
+	var camera := get_viewport().get_camera_3d() as ArenaCamera
+	if camera != null:
+		camera.add_shake(0.55)
 
 
 func take_hit(result: HitResult) -> void:

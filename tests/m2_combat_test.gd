@@ -88,6 +88,13 @@ func _run() -> void:
 	await _test_dragnet_hauls_everyone_in(yamabuki)
 	_test_every_pickable_ninja_has_a_full_kit()
 
+	_section("In the air")
+	await _test_a_jump_kick_carries_you_forward(kurogane, yamabuki)
+	await _test_a_slam_drives_you_at_the_floor(kurogane, yamabuki)
+	await _test_a_slam_stays_live_all_the_way_down(kurogane, yamabuki)
+	await _test_landing_a_slam_shakes_everyone_off_their_feet(kurogane, yamabuki)
+	await _test_air_moves_need_air(kurogane, yamabuki)
+
 	_section("Rhythm")
 	_test_animation_data_is_sane(kurogane)
 	await _test_mashing_earns_nothing(kurogane, yamabuki)
@@ -682,6 +689,122 @@ func _test_system_seize_takes_every_turret(fighter: Fighter) -> void:
 	await _ticks(40)
 
 
+# --- In the air ---
+
+## The jump kick is the approach tool: it should cover ground, which is the
+## whole reason to use it over waiting to land.
+func _test_a_jump_kick_carries_you_forward(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 5.0)
+	await _clear_of_the_stage(victim)
+	attacker.velocity = Vector3(0, 9.0, 0)
+	await _ticks(6)
+	_check(not attacker.is_on_floor(), "airborne for the kick")
+
+	var before := attacker.global_position
+	_tap(_source(attacker), InputFrame.Action.LIGHT)
+	await _ticks(3)
+	_check(attacker.get_state_id() == FighterState.ATTACK, "the kick comes out in the air")
+	await _ticks(20)
+
+	var travelled := Vector2(attacker.global_position.x - before.x,
+		attacker.global_position.z - before.z).length()
+	_check(travelled > 1.0, "it carries you forward (%.1f m)" % travelled)
+	await _ticks(40)
+
+
+## A slam is fired at the floor, not dropped toward it.
+func _test_a_slam_drives_you_at_the_floor(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 5.0)
+	await _clear_of_the_stage(victim)
+	attacker.velocity = Vector3(0, 11.0, 0)
+	await _ticks(10)
+	var apex := attacker.global_position.y
+	_check(not attacker.is_on_floor(), "airborne for the slam")
+
+	_tap(_source(attacker), InputFrame.Action.HEAVY)
+	var fastest := 0.0
+	for i in 40:
+		await get_tree().physics_frame
+		fastest = maxf(fastest, -attacker.velocity.y)
+		if attacker.is_on_floor():
+			break
+
+	var slam: AttackDef = attacker.move_set.air_heavy
+	_check(fastest >= slam.dive_speed * 0.9,
+		"it drives downward at %.0f m/s, not a fall (dive is %.0f)"
+			% [fastest, slam.dive_speed])
+	_check(attacker.global_position.y < apex - 1.0, "and it arrives")
+	await _ticks(40)
+
+
+## The point of holding the window open: a dive whose target moved should still
+## be a live attack all the way down, not a fighter falling with an animation.
+func _test_a_slam_stays_live_all_the_way_down(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 5.0)
+	await _clear_of_the_stage(victim)
+	attacker.global_position = Vector3(STAGE.x, 7.0, STAGE.z)
+	attacker.velocity = Vector3.ZERO
+	await _ticks(4)
+
+	_tap(_source(attacker), InputFrame.Action.HEAVY)
+	# Put the victim underneath partway through the descent, well after the
+	# authored active window would have closed on its own.
+	var caught := false
+	var health := victim.health
+	for i in 60:
+		await get_tree().physics_frame
+		if i == 24:
+			victim.global_position = Vector3(attacker.global_position.x, 0.3, attacker.global_position.z)
+			victim.velocity = Vector3.ZERO
+		if victim.health < health - 0.01:
+			caught = true
+			break
+	_check(caught, "somebody who walks under a slam mid-descent still gets hit")
+	await _ticks(50)
+	await _clear_of_the_stage(victim)
+
+
+func _test_landing_a_slam_shakes_everyone_off_their_feet(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 5.0)
+	attacker.global_position = Vector3(STAGE.x, 6.0, STAGE.z)
+	attacker.velocity = Vector3.ZERO
+	# Beside the impact, not under it: this measures the floor burst rather than
+	# the falling hitbox.
+	var slam: AttackDef = attacker.move_set.air_heavy
+	victim.global_position = STAGE + Vector3(slam.slam_radius * 0.7, 0, 0)
+	victim.velocity = Vector3.ZERO
+	victim.health = victim.max_health
+	await _ticks(4)
+
+	var health := victim.health
+	_tap(_source(attacker), InputFrame.Action.HEAVY)
+	for i in 70:
+		await get_tree().physics_frame
+		if attacker.is_on_floor() and attacker.get_state_id() == FighterState.ATTACK:
+			break
+	await _ticks(4)
+
+	_check(victim.health < health,
+		"the landing catches somebody standing beside it (%.1f -> %.1f)"
+			% [health, victim.health])
+	_check(victim.get_state_id() in [FighterState.HITSTUN, FighterState.KNOCKDOWN],
+		"and puts them in stun (%s)" % victim.get_state_id())
+	await _ticks(60)
+	await _clear_of_the_stage(victim)
+
+
+## On the ground the same buttons are the ground moves. An air move that came
+## out standing still would make the light chain unreachable.
+func _test_air_moves_need_air(attacker: Fighter, victim: Fighter) -> void:
+	await _stage(attacker, victim, 2.0)
+	_check(attacker.is_on_floor(), "standing on the floor")
+	_tap(_source(attacker), InputFrame.Action.HEAVY)
+	await _ticks(4)
+	_check(attacker.pending_attack != attacker.move_set.air_heavy,
+		"HEAVY on the ground is the ground heavy, not the slam")
+	await _ticks(60)
+
+
 # --- Jinsoku ---
 
 ## The dash is the attack; the decoy is what makes it hers. A STRENGTH 2 /
@@ -990,6 +1113,15 @@ func _test_defeat_at_zero_health(attacker: Fighter, victim: Fighter) -> void:
 
 ## Puts two fighters face to face on open floor with clean state, and parks
 ## everyone else back on their spawn so a bystander cannot wander into a hitbox.
+## Puts somebody well out of the way, for checks that are about one fighter.
+func _clear_of_the_stage(fighter: Fighter) -> void:
+	fighter.global_position = STAGE + Vector3(0, 0, -9.0)
+	fighter.velocity = Vector3.ZERO
+	_source(fighter).release_all()
+	_source(fighter).move = Vector2.ZERO
+	await _ticks(4)
+
+
 func _stage(attacker: Fighter, victim: Fighter, gap := GAP,
 		facing := Vector3.FORWARD) -> void:
 	for fighter: Fighter in _fighters:

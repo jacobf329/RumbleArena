@@ -54,7 +54,9 @@ func _poll(slot: PlayerSlot) -> void:
 
 ## What this seat should be showing above its fighter right now.
 func prompt_for(slot: PlayerSlot) -> String:
-	if _match == null or _match.phase != MatchManager.Phase.WAITING:
+	# Honours `enabled` as well as the phase: a suite that has switched select
+	# off should not still be told to advertise it.
+	if not enabled or _match == null or _match.phase != MatchManager.Phase.WAITING:
 		return ""
 	if slot.is_ready:
 		return "READY   [A] to change"

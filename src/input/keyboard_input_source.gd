@@ -39,6 +39,24 @@ func _axis(negative: Key, positive: Key) -> float:
 		- (1.0 if Input.is_physical_key_pressed(negative) else 0.0)
 
 
+const KEY_NAMES := {
+	InputFrame.Action.JUMP: "SPACE",
+	InputFrame.Action.LIGHT: "J",
+	InputFrame.Action.HEAVY: "K",
+	InputFrame.Action.GRAB: "U",
+	InputFrame.Action.INTERACT: "E",
+	InputFrame.Action.BLOCK: "CTRL",
+	InputFrame.Action.LAUNCHER: "L",
+	InputFrame.Action.ULTIMATE: "R",
+	InputFrame.Action.DODGE: "SHIFT",
+	InputFrame.Action.SIGNATURE: "Q",
+}
+
+
+func button_hint(action: InputFrame.Action) -> String:
+	return KEY_NAMES.get(action, "")
+
+
 func get_display_name() -> String:
 	return "Keyboard"
 
