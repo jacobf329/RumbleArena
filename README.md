@@ -229,14 +229,28 @@ you would need. Being refused is how you learn the roster.
 
 | | Gate | Who |
 |---|---|---|
+| Steel girder — lift and throw | STRENGTH 5 | Kurogane only |
 | Concrete pillar — lift and throw | STRENGTH 4 | Kurogane only |
 | Comms tower — climb | AGILITY 4 | Yamabuki only |
 | Ceiling turret — hack | TECH 3 | Null only |
+| Supply crate — lift and throw | STRENGTH 2 | everyone but Null |
 | Server rack — break for debris | STRENGTH 2 | everyone but Null |
+| Fuel barrel — lift and throw | STRENGTH 1 | everyone |
 | Debris — lift and throw | STRENGTH 1 | everyone |
 
 Each specialist owns exactly one verb nobody else has. The tower is 7 metres —
 past any double jump — so what sits on top of it is reachable one way only.
+
+**Pick something up with interact (B / E), and press it again to throw.** The
+weight ladder runs 1 to 5 so every ninja has something they can throw and
+something they are refused; the girder exists so Kurogane's STRENGTH 5 means
+something the pillars alone did not.
+
+**Fuel barrels are the exception to the ladder** — the lightest thing in the
+arena, so the ninja who can lift nothing else is the one holding the most
+dangerous object in the room. Picking one up lights a three-second fuse, and it
+flashes faster as it burns down. It goes off on whatever it hits, on whatever it
+lands on, or in your hands. It does not care whose it was.
 
 ![Climbing the comms tower](docs/images/m3-climb.png)
 
@@ -304,8 +318,8 @@ first step is an import pass — which builds the very cache whose absence is th
 bug.
 
 The normal run imports the project to surface script and scene parse errors,
-then runs the suites: 77 movement/input/camera, 132 combat, 50 interaction, 40
-match-flow and 52 bot checks — 351 in all. Every test
+then runs the suites: 77 movement/input/camera, 132 combat, 74 interaction, 40
+match-flow and 52 bot checks — 375 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

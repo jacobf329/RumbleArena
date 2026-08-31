@@ -245,11 +245,18 @@ func _update_interaction() -> void:
 		var held := carried
 		carried = null
 		held.throw_from(self)
+		# On a pad, B is both INTERACT and GRAB. Attacking is refused while your
+		# hands are full, which quietly covered the pick-up -- but a throw empties
+		# them on this very tick, so without this the grab then passes that check
+		# and every throw is followed by a whiffed grab: the longest recovery in
+		# the game, landing exactly where the player expects to be free again.
+		_consume_shared_press()
 		return
 
 	if interaction_target != null and interaction_target.can_use(self):
 		if not interaction_target.use(self):
 			return
+		_consume_shared_press()
 		var liftable := interaction_target as Liftable
 		if liftable != null:
 			carried = liftable
@@ -459,6 +466,15 @@ func _decay_attack_buffer() -> void:
 
 func _peek_attack_buffer() -> int:
 	return _attack_buffer_action if _attack_buffer_ticks > 0 else -1
+
+
+## An INTERACT press that did something is spent. It has to take the buffered
+## attack with it, because the button it arrived on may also be an attack button
+## -- and "engage with what is in front of me" should resolve to exactly one
+## thing per press.
+func _consume_shared_press() -> void:
+	if _attack_buffer_action in [InputFrame.Action.GRAB, InputFrame.Action.INTERACT]:
+		_clear_attack_buffer()
 
 
 func _clear_attack_buffer() -> void:

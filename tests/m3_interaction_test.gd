@@ -35,7 +35,15 @@ func _run() -> void:
 	await _test_carrying_slows_you_down()
 	await _test_carrying_prevents_attacking()
 	await _test_a_thrown_pillar_hurts()
+	await _test_the_pad_button_lifts_and_throws()
 	await _test_dying_returns_what_you_carried()
+	await _test_the_strength_ladder_has_no_gaps()
+
+	_section("Barrels")
+	await _test_a_thrown_barrel_detonates()
+	await _test_the_blast_falls_off_with_distance()
+	await _test_holding_one_too_long_goes_off_in_your_hands()
+	await _test_the_blast_does_not_spare_the_thrower()
 
 	_section("Breaking")
 	await _test_breaking_is_strength_gated()
@@ -169,6 +177,35 @@ func _test_a_thrown_pillar_hurts() -> void:
 	await _park(_yamabuki)
 
 
+## On a gamepad, B is deliberately both GRAB and INTERACT -- both mean "engage
+## with what is in front of me", and there are ten actions for eight good button
+## positions. That shortcut only holds if the two never fire at once, and this
+## is the check that they do not: a press that picks something up or throws it
+## must not also throw out a grab, which has the longest recovery in the game and
+## would lock you out of the follow-up press.
+func _test_the_pad_button_lifts_and_throws() -> void:
+	var pillar := _pillar()
+	pillar.release()
+	await _stand_at(_kurogane, pillar)
+
+	var attacks := _kurogane.attacks_started
+	await _press_pad_b(_kurogane)
+	_check(_kurogane.carried == pillar, "one press of B picks it up")
+	_check(_kurogane.attacks_started == attacks,
+		"and does not also swing a grab (%d attacks)"
+			% [_kurogane.attacks_started - attacks])
+
+	# The press straight after it has to be the throw. If the first press left
+	# the fighter in a grab's recovery, this one lands in a state the
+	# interaction handler ignores and the item simply stays in your hands.
+	await _press_pad_b(_kurogane)
+	_check(_kurogane.carried == null, "the very next press throws it")
+	_check(_kurogane.attacks_started == attacks,
+		"and that one does not swing either")
+	await _ticks(40)
+	await _park(_kurogane)
+
+
 func _test_dying_returns_what_you_carried() -> void:
 	var pillar := _pillar()
 	pillar.release()
@@ -181,6 +218,152 @@ func _test_dying_returns_what_you_carried() -> void:
 	_check(_kurogane.carried == null and pillar.carrier == null,
 		"respawning puts the pillar back rather than removing it from the match")
 	await _park(_kurogane)
+
+
+## Every one of the four staged characters should have something in this arena
+## they can pick up, and something they cannot. The ladder used to go 1, 4: two
+## of them had nothing but rubble, which made a third of the design's signature
+## verb invisible in the only level that exists.
+func _test_the_strength_ladder_has_no_gaps() -> void:
+	var tiers: Array[int] = []
+	for node in _main.get_node("Arena/Interactables").get_children():
+		var liftable := node as Liftable
+		if liftable != null and not tiers.has(liftable.mass_class):
+			tiers.append(liftable.mass_class)
+	tiers.sort()
+	_check(tiers.size() >= 4, "the arena offers at least four weight classes %s" % [tiers])
+
+	# Counted across every interactable rather than the liftables alone. On the
+	# STRENGTH ladder by itself the strongest character is of course refused
+	# nothing -- that is what being strongest means. The rule the design actually
+	# makes is that nobody clears the whole arena, which holds because everyone
+	# has a stat at 2 or below somewhere.
+	for fighter: Fighter in _fighters:
+		var can := 0
+		var cannot := 0
+		for node in _main.get_node("Arena/Interactables").get_children():
+			var thing := node as Interactable
+			if thing == null:
+				continue
+			if thing.can_use(fighter):
+				can += 1
+			else:
+				cannot += 1
+		_check(can > 0, "%s can use something (%d)"
+			% [fighter.character_def.display_name, can])
+		_check(cannot > 0, "%s is refused something (%d)"
+			% [fighter.character_def.display_name, cannot])
+
+
+# --- Barrels ---
+
+func _test_a_thrown_barrel_detonates() -> void:
+	var barrel := _barrel()
+	await _stand_at(_null, barrel)
+	# STRENGTH 1 -- she can lift nothing else in the arena, and this on purpose.
+	_check(barrel.can_use(_null), "even the weakest ninja can lift a barrel")
+	await _press_interact(_null)
+	_check(_null.carried == barrel, "picked up")
+	if _null.carried != barrel:
+		return
+
+	_null.global_position = Vector3(-8, 0.3, 12)
+	_null.snap_facing(Vector3.RIGHT)
+	_yamabuki.global_position = Vector3(-4.0, 0.3, 12)
+	_yamabuki.velocity = Vector3.ZERO
+	await _ticks(10)
+
+	var health := _yamabuki.health
+	await _press_interact(_null)
+	var hit := false
+	for i in 90:
+		await get_tree().physics_frame
+		if _yamabuki.health < health - 0.01:
+			hit = true
+			break
+	_check(hit, "a thrown barrel blows up on contact for %.1f"
+		% (health - _yamabuki.health))
+	_check(not is_instance_valid(barrel), "and the barrel is spent")
+	await _ticks(50)
+	await _park(_yamabuki)
+
+
+## Being at the edge of a blast has to be meaningfully better than being on top
+## of it, or there is no reason to move once you hear the fuse.
+func _test_the_blast_falls_off_with_distance() -> void:
+	var barrel := _barrel()
+	if barrel == null:
+		_check(false, "a barrel is available for the falloff check")
+		return
+	barrel.global_position = Vector3(0, 0.4, 12)
+
+	_jinsoku.global_position = Vector3(0.8, 0.3, 12)
+	_yamabuki.global_position = Vector3(0, 0.3, 12) + Vector3(barrel.blast_radius * 0.92, 0, 0)
+	for f: Fighter in [_jinsoku, _yamabuki]:
+		f.velocity = Vector3.ZERO
+		f.health = f.max_health
+	await _ticks(8)
+
+	var near := _jinsoku.health
+	var far := _yamabuki.health
+	barrel.call("_detonate")
+	await _ticks(6)
+
+	var near_damage := near - _jinsoku.health
+	var far_damage := far - _yamabuki.health
+	_check(near_damage > 0.0 and far_damage > 0.0, "both are caught in the blast")
+	_check(near_damage > far_damage * 1.4,
+		"standing on it hurts far more than standing at the edge (%.1f vs %.1f)"
+			% [near_damage, far_damage])
+	await _ticks(60)
+	await _park(_jinsoku)
+	await _park(_yamabuki)
+
+
+## The fuse is what makes a barrel a decision rather than a free grenade.
+func _test_holding_one_too_long_goes_off_in_your_hands() -> void:
+	var barrel := _barrel()
+	if barrel == null:
+		_check(false, "a barrel is available for the fuse check")
+		return
+	await _park(_kurogane)
+	barrel.global_position = _kurogane.global_position + Vector3(0, 0.4, -1.0)
+	await _stand_at(_kurogane, barrel)
+	await _press_interact(_kurogane)
+	_check(_kurogane.carried == barrel, "carrying a lit barrel")
+
+	var health := _kurogane.health
+	var ticks := ceili(barrel.fuse_seconds * 60.0) + 20
+	for i in ticks:
+		await get_tree().physics_frame
+		if not is_instance_valid(barrel):
+			break
+
+	_check(not is_instance_valid(barrel), "the fuse runs out on its own")
+	_check(_kurogane.health < health,
+		"and it goes off in your hands (%.1f -> %.1f)" % [health, _kurogane.health])
+	_check(_kurogane.carried == null, "leaving your hands empty")
+	await _ticks(50)
+
+
+## No friendly fire exemption. A barrel is the one thing in the arena that does
+## not care whose it was.
+func _test_the_blast_does_not_spare_the_thrower() -> void:
+	# Spawned rather than borrowed from the arena: barrels are consumed by use,
+	# and by this point the checks above have spent them.
+	var barrel := _spawn_barrel()
+	await _park(_jinsoku)
+	barrel.global_position = _jinsoku.global_position + Vector3(0.8, 0.4, 0)
+	_jinsoku.health = _jinsoku.max_health
+	await _ticks(6)
+
+	var health := _jinsoku.health
+	barrel.carrier = _jinsoku   # as if they had just thrown it
+	barrel.call("_detonate")
+	await _ticks(6)
+	_check(_jinsoku.health < health,
+		"your own barrel hurts you (%.1f -> %.1f)" % [health, _jinsoku.health])
+	await _ticks(50)
 
 
 # --- Breaking ---
@@ -329,8 +512,37 @@ func _test_a_hacked_turret_shoots_the_others() -> void:
 
 # --- Local helpers ---
 
+## What a real gamepad sends for B: GRAB and INTERACT on the same edge.
+func _press_pad_b(fighter: Fighter) -> void:
+	var source := _source(fighter)
+	source.hold(InputFrame.Action.INTERACT, true)
+	source.hold(InputFrame.Action.GRAB, true)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	source.hold(InputFrame.Action.INTERACT, false)
+	source.hold(InputFrame.Action.GRAB, false)
+	await _ticks(6)
+
+
 func _pillar() -> Liftable:
 	return _main.get_node("Arena/Interactables/PillarWest") as Liftable
+
+
+## A fresh barrel, parented where the arena keeps its props.
+func _spawn_barrel() -> ExplosiveBarrel:
+	var barrel: ExplosiveBarrel = preload("res://scenes/interactables/barrel.tscn").instantiate()
+	(_main.get_node("Arena") as Arena).interactable_root().add_child(barrel)
+	return barrel
+
+
+## The first barrel still standing. They are consumed by use, so a test that
+## wants one has to ask rather than assume.
+func _barrel() -> ExplosiveBarrel:
+	for node in _main.get_node("Arena/Interactables").get_children():
+		var barrel := node as ExplosiveBarrel
+		if barrel != null and is_instance_valid(barrel):
+			return barrel
+	return null
 
 
 func _turret() -> HackableTurret:

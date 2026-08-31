@@ -453,6 +453,39 @@ that anyone on the roster has both buttons wired to different moves.
 
 ---
 
+## Props, and a button doing two things at once
+
+Throwing was implemented and tested from the start, and did not work on a
+gamepad. B is deliberately both INTERACT and GRAB -- both mean "engage with
+what is in front of me", and ten actions do not fit in eight good button
+positions. Attacking is refused while your hands are full, which quietly
+covered the pick-up; but a throw empties them on the very tick it fires, so the
+grab then passed that check and every throw was followed by a whiffed grab --
+the longest recovery in the game, landing exactly where the player expects to be
+free again. It read as "I can't throw things".
+
+An INTERACT press that did something now consumes the buffered attack with it.
+A shared button should resolve to exactly one thing per press.
+
+The suite could not see it because every existing test pressed INTERACT alone.
+There is now one that presses the button the way the hardware does, with both
+actions on the same edge.
+
+Props added at the same time:
+
+- **Supply crate** (STRENGTH 2) and **steel girder** (STRENGTH 5). The ladder
+  went 1, 4 before: two of the four staged characters had nothing in the only
+  arena they could pick up except rubble, which made a third of the design's
+  signature verb invisible in play. The girder is also the reason Kurogane's
+  STRENGTH 5 means anything the pillars did not already say.
+- **Fuel barrel** (STRENGTH 1), which detonates. Deliberately the lightest
+  thing in the arena rather than the heaviest: the ninja who can lift nothing
+  else is the one holding the most dangerous object in the room. The fuse is
+  what makes it a decision rather than a free grenade -- picking one up starts
+  a three-second clock and it goes off in your hands when that runs out. No
+  friendly-fire exemption; it is the one object here that does not care whose
+  it was.
+
 ## Two installs that looked like a broken game
 
 The same failure has now shipped twice, and it is worth writing down because

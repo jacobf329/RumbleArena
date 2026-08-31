@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://src/arenas/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/pillar.tscn" id="2_pillar"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" path="res://scenes/interactables/turret.tscn" id="4_turret"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/climbable_wall.tscn" id="5_climb"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/debris.tscn" id="6_debris"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/crate.tscn" id="7_crate"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/girder.tscn" id="8_girder"]
+[ext_resource type="PackedScene" path="res://scenes/interactables/barrel.tscn" id="9_barrel"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.29, 0.3, 0.34, 1)
@@ -158,6 +161,34 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -11.4, 3.5, -13)
 
 [node name="TowerPrize" parent="Interactables" instance=ExtResource("6_debris")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 7.4, -13)
+
+; Crates at STRENGTH 2 fill the gap between debris (anyone) and the pillars
+; (Kurogane alone). Before these, the ladder went 1, 4: two of the four staged
+; characters had nothing in the arena they could pick up but rubble.
+[node name="CrateSouthWest" parent="Interactables" instance=ExtResource("7_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 6)
+
+[node name="CrateSouthEast" parent="Interactables" instance=ExtResource("7_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0, 6)
+
+[node name="CrateNorth" parent="Interactables" instance=ExtResource("7_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -10)
+
+; The only STRENGTH 5 object in the arena, and the reason Kurogane's stat line
+; goes to 5 rather than stopping at the pillars' 4.
+[node name="Girder" parent="Interactables" instance=ExtResource("8_girder")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, -6)
+
+; Barrels are deliberately the lightest thing here: the ninja who can lift
+; nothing else is the one holding the most dangerous object in the room.
+[node name="BarrelWest" parent="Interactables" instance=ExtResource("9_barrel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 2)
+
+[node name="BarrelEast" parent="Interactables" instance=ExtResource("9_barrel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 2)
+
+[node name="BarrelCentre" parent="Interactables" instance=ExtResource("9_barrel")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.7, 0)
 
 [node name="TurretWest" parent="Interactables" instance=ExtResource("4_turret")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 5.2, -3)

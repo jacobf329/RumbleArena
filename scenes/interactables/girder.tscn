@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/interactables/liftable.gd" id="1_liftable"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_girder"]
+albedo_color = Color(0.35, 0.4, 0.46, 1)
+roughness = 0.55
+metallic = 0.6
+
+[sub_resource type="BoxMesh" id="Mesh_girder"]
+size = Vector3(3.6, 0.42, 0.42)
+
+[sub_resource type="BoxShape3D" id="Shape_girder"]
+size = Vector3(3.6, 0.5, 0.5)
+
+[node name="Girder" type="Area3D"]
+script = ExtResource("1_liftable")
+display_name = "Steel Girder"
+mass_class = 5
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("Shape_girder")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("Mesh_girder")
+material_override = SubResource("Mat_girder")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("Shape_girder")
