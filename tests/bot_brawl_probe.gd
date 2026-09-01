@@ -18,6 +18,8 @@ var _wedge_spot := {}
 var _carrying := {}
 var _pickups := 0
 var _throws := 0
+var _offscreen := 0
+var _edge_worst := 0.0
 
 
 func _init() -> void:
@@ -93,6 +95,14 @@ func _run() -> void:
 		for a in live:
 			for b in live:
 				widest = maxf(widest, a.distance_to(b))
+		# Whether anybody actually left the frame. Tightening the camera's padding
+		# is only safe if knockback cannot outrun the zoom-out, and that is a
+		# question about live play rather than about staged spacing.
+		var edge := _worst_edge()
+		_edge_worst = maxf(_edge_worst, edge)
+		if edge > 1.0:
+			_offscreen += 1
+
 		_spreads.append(widest)
 		spread_sum += widest
 		distance_sum += _camera.get_distance()
@@ -107,6 +117,8 @@ func _run() -> void:
 	print("  mean camera distance %.1f m" % (distance_sum / maxf(samples, 1)))
 	print("  fighters mid-attack per sample %.2f" % (float(attacking) / maxf(samples, 1)))
 	print("  props picked up %d, thrown %d" % [_pickups, _throws])
+	print("  worst edge %.2f (1.0 = on the frame edge), samples off screen %d of %d"
+		% [_edge_worst, _offscreen, samples])
 	print("  wedged ticks %s" % _wedged)
 	print("  last wedge spots %s" % _wedge_spot)
 	print("  phase after: %s" % match_manager.phase_name())
@@ -116,6 +128,24 @@ func _run() -> void:
 			slot.get_label(), (slot.source as BotInputSource).skill,
 			match_manager.get_stocks(slot.index), f.health])
 	_check(true, "the brawl ran")
+
+
+## How close the outermost fighter got to leaving the frame.
+func _worst_edge() -> float:
+	var right: Vector3 = _camera.global_transform.basis.x
+	var up: Vector3 = _camera.global_transform.basis.y
+	var half_height: float = _camera.get_distance() * tan(deg_to_rad(_camera.fov) * 0.5)
+	var half_width: float = half_height * (16.0 / 9.0)
+
+	var worst := 0.0
+	for slot: PlayerSlot in PlayerManager.get_active_slots():
+		var fighter := slot.fighter as Fighter
+		if fighter == null or fighter.is_eliminated:
+			continue
+		var offset: Vector3 = (fighter.global_position + Vector3.UP * 2.7) - _camera.get_focus()
+		worst = maxf(worst, absf(offset.dot(right)) / maxf(half_width, 0.001))
+		worst = maxf(worst, absf(offset.dot(up)) / maxf(half_height, 0.001))
+	return worst
 
 
 func _pct(p: float) -> float:

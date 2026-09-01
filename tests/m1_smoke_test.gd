@@ -34,6 +34,7 @@ func _run() -> void:
 	await _test_camera_framing(kurogane, yamabuki)
 	await _test_camera_smoothing_is_asymmetric(kurogane, yamabuki)
 	await _test_camera_has_clear_view(kurogane, yamabuki)
+	await _test_a_fight_at_the_arena_edge_stays_framed(kurogane, yamabuki)
 	await _test_fall_out_respawns(kurogane)
 
 	_section("Real device input")
@@ -242,6 +243,55 @@ func _test_camera_framing(a: Fighter, b: Fighter) -> void:
 
 ## Zoom out fast, zoom in slow. Snapping in on a KO and back out is nauseating,
 ## so this asymmetry is a deliberate feel decision worth locking down.
+## Nobody is clipped when the fight is jammed into a corner.
+##
+## Every other camera check stages fights in the middle of the room, where the
+## focus is free to sit exactly between the fighters. Out here it is clamped to
+## the camera bounds while the fighters are not, so the frame is centred somewhere
+## they are not standing -- the one case where the framing has to work for a
+## centre it did not choose. Padding is dropped for the duration to take away the
+## slack that would otherwise make this pass no matter what.
+##
+## Deliberately a broad property check: it does not isolate any particular
+## framing mistake, because at the scale where the clamp engages, min_distance
+## and head_room dominate anything the clamp does. It is here to catch a future
+## change that makes edge framing much worse, not to guard one line.
+func _test_a_fight_at_the_arena_edge_stays_framed(a: Fighter, b: Fighter) -> void:
+	# Hard into the corner. The floor reaches +-16 and the camera bounds stop at
+	# +-14, so a midpoint out here is genuinely outside them -- which is the only
+	# situation where the clamped focus and the true centre come apart at all.
+	await _place(a, Vector3(-15.5, 0.3, 15.5))
+	await _place(b, Vector3(-13.0, 0.3, 15.5))
+
+	var original_padding: float = _camera.padding
+	_camera.padding = 0.2
+	await _ticks(150)
+
+	var focus := _camera.get_focus()
+	var midpoint := (a.global_position + b.global_position) * 0.5
+	_check(focus.distance_to(midpoint) > 0.5,
+		"the focus really is clamped away from the fighters (%.1f m)"
+			% focus.distance_to(midpoint))
+
+	for fighter: Fighter in [a, b]:
+		_check(_within_frame(fighter),
+			"%s is still on screen at the arena edge" % fighter.character_def.display_name)
+
+	_camera.padding = original_padding
+	await _ticks(60)
+
+
+## Whether a fighter, nameplate and all, sits inside the frustum. Measured on
+## the camera's own axes rather than by unprojecting to pixels, because the
+## headless viewport is not the shape the game is played on.
+func _within_frame(fighter: Fighter) -> bool:
+	var half_height: float = _camera.get_distance() * tan(deg_to_rad(_camera.fov) * 0.5)
+	var half_width: float = half_height * (16.0 / 9.0)
+	var offset: Vector3 = (fighter.global_position + Vector3.UP * 2.7) - _camera.get_focus()
+	return absf(offset.dot(_camera.global_transform.basis.x)) <= half_width \
+		and absf(offset.dot(_camera.global_transform.basis.y)) <= half_height
+
+
 func _test_camera_smoothing_is_asymmetric(a: Fighter, b: Fighter) -> void:
 	const SETTLE := 20
 

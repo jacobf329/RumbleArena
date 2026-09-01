@@ -33,7 +33,10 @@ only, so skin and armour stay put:
 
 ![Four players in the Proving Ground](docs/images/m1-four-players.png)
 
-The camera frames everyone and pushes in when the fight closes up:
+The camera frames everyone and pushes in when the fight closes up. A standing
+ninja covers about 11% of the screen's height with the fight in one spot and
+around 7% at a normal working distance — measured, because "is it zoomed out too
+far" is not a question one screenshot answers:
 
 ![The camera pushing in](docs/images/m1-camera-close.png)
 
@@ -331,8 +334,8 @@ first step is an import pass — which builds the very cache whose absence is th
 bug.
 
 The normal run imports the project to surface script and scene parse errors,
-then runs the suites: 77 movement/input/camera, 143 combat, 79 interaction, 40
-match-flow and 65 bot checks — 404 in all. Every test
+then runs the suites: 80 movement/input/camera, 143 combat, 79 interaction, 40
+match-flow and 65 bot checks — 407 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

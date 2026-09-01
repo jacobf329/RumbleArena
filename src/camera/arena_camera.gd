@@ -13,13 +13,32 @@ extends Camera3D
 @export var yaw_degrees := 0.0
 
 @export_group("Framing")
-@export var min_distance := 12.0
+@export var min_distance := 8.0
 @export var max_distance := 34.0
 ## World units of breathing room kept around the outermost fighter.
-@export var padding := 5.0
-## Headroom above the tallest fighter, so nameplates are never clipped.
-@export var head_room := 1.8
+##
+## This is the single number that decides how big a fighter reads, because at
+## anything short of a full-arena spread it, not the spread, is what the framing
+## is solving for. At 5.0 it kept a body's height of empty floor on every side of
+## the outermost fighter and put a standing ninja at 8% of screen height with the
+## fight in one spot, and under 6% in a typical brawl -- while the outermost
+## fighter never once got past halfway to the edge of the frame. All of that
+## margin was being spent on nothing.
+@export var padding := 2.6
+## Headroom above the tallest fighter, so nameplates are never clipped. Sized to
+## the nameplate's actual height above the feet rather than guessed.
+@export var head_room := 2.6
 @export var look_height := 1.6
+
+## Speed above which a target is treated as going somewhere, in metres/second.
+## Set above any character's top running speed so that walking around never
+## moves the framing, and only a dash or a knockback does.
+const LEAD_THRESHOLD := 10.0
+## How far ahead of a fast-moving target the framing looks, in seconds.
+const LEAD_SECONDS := 0.5
+## Cap on the lead, so a wall-splat launch does not throw the camera to the far
+## side of the arena for the one frame before the wall stops them.
+const LEAD_MAX := 5.0
 
 @export_group("Smoothing")
 ## Asymmetric by design: snapping in on a KO and back out again is nauseating,
@@ -74,8 +93,18 @@ func _physics_process(delta: float) -> void:
 
 	var enclosing := _enclosing_box(framed)
 	var desired_focus := _clamp_to_bounds(enclosing.get_center())
+	# Solved against the focus the camera will actually use, not the raw centre of
+	# the fighters. Those differ whenever the fight drifts to an arena edge,
+	# because the focus is clamped inside the bounds and the centre is not, and
+	# sizing a frame for a point you then do not look at is simply wrong.
+	#
+	# Honestly: correctness only. Four brawls each way put 6 off-screen samples
+	# against 9 out of 1800, which is noise -- at the scale where the clamp
+	# actually engages, min_distance and head_room dominate anything it does. The
+	# earlier claim that this fixed fighters leaving the frame did not survive
+	# being measured.
 	var desired_distance := clampf(
-		_required_distance(enclosing.get_center()), min_distance, max_distance)
+		_required_distance(desired_focus), min_distance, max_distance)
 
 	_focus = _focus.lerp(desired_focus, minf(pan_speed * delta, 1.0))
 
@@ -86,10 +115,13 @@ func _physics_process(delta: float) -> void:
 	_apply_transform()
 
 
+## Leads too, and for the same reason: framing the distance for where somebody
+## is about to be while still centring on where they are would put them off the
+## edge of a correctly-sized frame.
 func _enclosing_box(framed: Array[Node3D]) -> AABB:
-	var box := AABB(framed[0].global_position, Vector3.ZERO)
+	var box := AABB(_framing_position(framed[0]), Vector3.ZERO)
 	for target: Node3D in framed:
-		box = box.expand(target.global_position)
+		box = box.expand(_framing_position(target))
 	return box
 
 
@@ -107,7 +139,7 @@ func _required_distance(center: Vector3) -> float:
 	var half_width := 0.0
 	var half_height := 0.0
 	for target: Node3D in _targets.filter(func(t: Node3D) -> bool: return t.visible):
-		var offset := target.global_position - center
+		var offset := _framing_position(target) - center
 		half_width = maxf(half_width, absf(offset.dot(right)))
 		half_height = maxf(half_height, absf(offset.dot(up)))
 
@@ -121,6 +153,25 @@ func _required_distance(center: Vector3) -> float:
 		half_width / maxf(tan(horizontal_half_fov), 0.01),
 		half_height / maxf(tan(vertical_half_fov), 0.01)
 	)
+
+
+## Where a target is about to be, for anything moving faster than a person runs.
+##
+## The camera frames where fighters ARE, and knockback moves them faster than the
+## zoom-out follows -- so the launched fighter is off screen for exactly the
+## moment that matters, which is the one where you would have wanted to tech.
+## Leading by half a second buys the whole flight and costs nothing at walking
+## pace, because below the threshold this returns the position unchanged.
+func _framing_position(target: Node3D) -> Vector3:
+	var raw: Variant = target.get(&"velocity")
+	if not (raw is Vector3):
+		return target.global_position
+	var velocity: Vector3 = raw
+	var speed := velocity.length()
+	if speed <= LEAD_THRESHOLD:
+		return target.global_position
+	return target.global_position \
+		+ velocity.normalized() * minf((speed - LEAD_THRESHOLD) * LEAD_SECONDS, LEAD_MAX)
 
 
 func _aspect() -> float:

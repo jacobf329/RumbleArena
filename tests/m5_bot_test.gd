@@ -320,13 +320,14 @@ func _test_a_bot_fetches_something_it_can_lift() -> void:
 	PlayerManager.add_bot(1.0)
 	await _ticks(3)
 	var fighter := _bot_fighter(0)
+	# Whether it bothers is a die roll in play, and this check is about what
+	# happens when it decides to -- the walk, the reach, the pickup. Left to
+	# chance it failed a third of the time.
+	_bot(0).fetch_chance = 1.0
 
-	# Across the arena, with the prop on the way. Two things this geometry has to
-	# respect: props are scored by how far they add to the trip the bot was
-	# already making, so one behind it is correctly refused; and fetching is a
-	# chance taken every third of a second while the target is still far off, so
-	# the walk has to be long enough for that roll to come up rather than the bot
-	# arriving in punching range first.
+	# Across the arena, with the prop on the way: props are scored by how far
+	# they add to the trip the bot was already making, so one behind it is
+	# correctly refused and would make this a test of the wrong thing.
 	_human.global_position = Vector3(-12.0, 0.3, 12.0)
 	fighter.global_position = Vector3(12.0, 0.3, 13.0)
 	var crate := _liftable_for(fighter)

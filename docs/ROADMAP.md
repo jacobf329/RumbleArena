@@ -486,6 +486,64 @@ Props added at the same time:
   friendly-fire exemption; it is the one object here that does not care whose
   it was.
 
+## The camera was zoomed too far out, and I had said so twice
+
+A standing ninja covered 8.3% of the screen's height with the whole fight in one
+spot, and 5.6-6.8% at a normal working distance. That is small for a game where
+you have to read a wind-up. Meanwhile the outermost fighter never once got past
+halfway to the edge of the frame -- all that margin was being spent on nothing.
+
+Padding was the number doing it. At 5.0 it kept a body's height of empty floor
+on every side of the outermost fighter, and at anything short of a full-arena
+spread it, not the spread, was what the framing solved for. Padding 2.6,
+head_room 2.6 (sized to the nameplate rather than guessed) and min_distance 8.0
+put a fighter at 11.1% tight and 6.7-8.6% at working distances. The permission
+prompts above fighters' heads are legible from the normal camera position now,
+which they were not -- that is the game's main teaching mechanism, and it had
+been too small to read.
+
+### What this turned up, including about my own claim
+
+Measuring it needed two instruments, and the first one was wrong. Projecting a
+fighter's head and feet to pixels answers in the real viewport's units, and the
+headless viewport is not the shape the game is played on -- dividing those pixels
+by an assumed 1080 would have reported half the truth. The fraction is computed
+from the camera's own distance and field of view instead, with the cosine of the
+pitch for foreshortening, which depends on nothing outside the camera.
+
+The tighter framing then had to be shown safe under knockback, not just at staged
+spacings, so the brawl probe now counts samples where anybody is off screen. It
+found that fighters already left the frame occasionally before any of this.
+
+I thought I had found the cause: the framing distance was solved against the raw
+centre of the fighters while the camera looks at a version of that clamped inside
+the arena bounds, so it was sizing a frame for a point it never uses. That is a
+genuine mistake and it is fixed. But four brawls each way put 6 off-screen
+samples against 9 out of 1800 -- noise. And the regression test I wrote for it
+passed with the fix reverted, twice, even with padding dropped to almost nothing:
+at the scale where the clamp engages, min_distance and head_room dominate
+anything it does.
+
+So the fix stands on correctness alone, and the test stayed as what it honestly
+is -- a broad check that nobody is clipped in a corner, not a guard on that line.
+A test that agrees with either answer is worth less than no test, and the useful
+habit is to revert the fix and watch the new test fail before believing it.
+
+Two more from the same pass, both in the bot:
+
+- **A freed object cannot be passed to a typed parameter**, and the call fails
+  quietly: GDScript refuses the cast, the function returns its default, and the
+  caller carries on with a wrong answer. An errand freed between ticks -- a
+  barrel detonating, thrown debris being consumed -- was aborting the bot's whole
+  think loop, which is why a bot standing next to a blocking opponent did
+  nothing at all for six hundred frames. Third time that exact trap has bitten
+  in this project.
+- **A test that turns on a die roll fails a third of the time**, and passing it
+  four times running is not evidence it does not. Whether a bot bothers with a
+  prop is deliberately a chance; whether it can reach one and pick it up is not.
+  The chance is a per-bot knob now, like crowd_pull and skill, so the check can
+  fix it at 1.0 and test the walk instead of the dice.
+
 ## Bots that use the arena
 
 Half the game was the arena, and bots played the other half. Nothing stopped

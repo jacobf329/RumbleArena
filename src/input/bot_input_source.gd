@@ -54,9 +54,8 @@ const FETCH_WORTH_IT := 5.5
 ## at opposite corners: the fight was spread over twenty metres a hundred
 ## percent of the time, and they attacked a third as often.
 const MAX_DETOUR := 4.5
-## Chance of bothering at all when the timer comes round. A bot that fetched
-## every time it could would be a bot that never fights.
-const FETCH_CHANCE := 0.35
+## Default for fetch_chance below.
+const DEFAULT_FETCH_CHANCE := 0.35
 ## Quiet period after a throw, so it does not immediately go looking again.
 const FETCH_REST := 4.0
 ## Seconds between looking around for something to pick up. Short on purpose:
@@ -92,6 +91,13 @@ var skill: float = 0.5
 ## because that is where the game is; the AI has to be told to. Tunable per bot
 ## so the effect can be measured rather than asserted.
 var crowd_pull: float = DEFAULT_CROWD_PULL
+## Chance of bothering with a prop at all when the scan comes round. A bot that
+## fetched every time it could would be a bot that never fights.
+##
+## Per bot rather than a constant for the same reason crowd_pull is: it is a
+## personality knob, and a check of "can this bot fetch at all" should not turn
+## on a coin flip. Left as a constant it made that test fail a third of the time.
+var fetch_chance: float = DEFAULT_FETCH_CHANCE
 
 var _index: int
 ## A Node3D rather than a Fighter, because an afterimage is a legitimate thing
@@ -268,7 +274,7 @@ func _handle_errands(delta: float, to_target: Vector3, distance: float) -> bool:
 		if _fetch_timer > 0.0 or distance < FETCH_WORTH_IT:
 			return false
 		_fetch_timer = FETCH_INTERVAL
-		if randf() > FETCH_CHANCE * (0.5 + skill):
+		if randf() > fetch_chance * (0.5 + skill):
 			return false
 		_errand = _find_something_to_carry(to_target)
 		if _errand == null:
@@ -338,10 +344,18 @@ func _find_something_to_carry(to_target: Vector3) -> Interactable:
 	return best
 
 
-func _worth_fetching(thing: Interactable) -> bool:
+## Untyped on purpose. An errand can be freed between one tick and the next -- a
+## barrel detonates, debris is thrown and consumed -- and a freed object cannot
+## be passed to a typed parameter at all: GDScript refuses the cast, the call
+## errors, and the function returns its default rather than answering. That is
+## the third time that has bitten in this file, and it fails quietly every time.
+func _worth_fetching(thing) -> bool:
 	if thing == null or not is_instance_valid(thing):
 		return false
-	return thing.is_offered(fighter) and thing.can_use(fighter)
+	var interactable := thing as Interactable
+	if interactable == null:
+		return false
+	return interactable.is_offered(fighter) and interactable.can_use(fighter)
 
 
 ## Asking to move and not moving means something is in the way.
