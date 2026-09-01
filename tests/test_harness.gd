@@ -9,6 +9,10 @@ extends Node
 const MAIN_SCENE := preload("res://scenes/main.tscn")
 
 var test_name := "test"
+## Suites about the front end have no arena to stage anything in, and booting one
+## would put a second set of autoload consumers behind the screen under test.
+## Set false in a subclass's _init, which runs before _ready.
+var boots_arena := true
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -19,6 +23,11 @@ var character_select: CharacterSelect
 
 
 func _ready() -> void:
+	if not boots_arena:
+		await _run()
+		_report()
+		return
+
 	_main = MAIN_SCENE.instantiate()
 	add_child(_main)
 	await get_tree().physics_frame

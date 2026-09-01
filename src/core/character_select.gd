@@ -14,9 +14,11 @@ extends Node
 signal character_changed(slot: PlayerSlot)
 
 @export var match_path: NodePath
-## Off in tests that are not about selection: they drive fighters directly, and
-## a stray button press should not swap somebody's character mid-check.
-@export var enabled: bool = true
+## Off by default now that picking happens on its own screen before the arena
+## ever loads. The node stays because the warm-up before the bell is still a
+## legitimate place to change your mind, and because the M4 suite covers this
+## path -- but nothing turns it on in the normal flow.
+@export var enabled: bool = false
 
 var _match: MatchManager
 

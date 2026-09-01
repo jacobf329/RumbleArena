@@ -44,6 +44,12 @@ func is_held(action: Action) -> bool:
 	return _held & (1 << action) != 0
 
 
+## Makes this frame's held state also its previous state, so nothing in it reads
+## as a fresh press. Used when a source is first polled.
+func carry_forward() -> void:
+	_previous = _held
+
+
 func is_just_pressed(action: Action) -> bool:
 	return _held & ~_previous & (1 << action) != 0
 

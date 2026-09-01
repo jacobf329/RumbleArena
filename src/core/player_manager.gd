@@ -123,6 +123,20 @@ func clear_bots() -> int:
 	return removed
 
 
+## Empties every seat, humans included. Leaving character select is the one
+## place this is right: coming back to a lobby holding the last group's picks,
+## on devices nobody is still holding, is worse than starting clean.
+func clear_seats() -> void:
+	for slot in slots:
+		if not slot.is_active():
+			continue
+		slot.source = null
+		slot.is_ready = false
+		slot.character_index = slot.index
+		_was_awaiting[slot.index] = false
+		player_left.emit(slot)
+
+
 func get_bot_count() -> int:
 	return slots.filter(func(slot: PlayerSlot) -> bool: return slot.is_bot()).size()
 

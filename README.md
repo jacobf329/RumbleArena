@@ -65,6 +65,14 @@ pillar declares "STRENGTH 3" — the bruiser rips it out and throws it, the hack
 sees the prompt greyed out and learns what she isn't. Every character has at
 least one stat at 4+ and one at 2 or below. There are no well-rounded ninjas.
 
+The game opens on a menu now, and picking your ninja happens on its own screen
+before the arena loads — six stats and two named powers do not fit above
+somebody's head, so nobody ever read them:
+
+![The main menu](docs/images/m6-main-menu.png)
+
+![Character select](docs/images/m6-character-select.png)
+
 ## Playing it
 
 ### Windows — the short version
@@ -335,7 +343,7 @@ bug.
 
 The normal run imports the project to surface script and scene parse errors,
 then runs the suites: 80 movement/input/camera, 143 combat, 79 interaction, 40
-match-flow and 65 bot checks — 407 in all. Every test
+match-flow, 65 bot and 35 front-end checks — 442 in all. Every test
 drives real fighters through the real main scene using scripted input sources.
 Because fighters only ever read an `InputFrame`, the whole game is testable
 headlessly with no hardware.

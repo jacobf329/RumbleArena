@@ -39,7 +39,7 @@ if ! GODOT="$GODOT" "$PROJECT/tools/check_cache_guard.sh"; then
 fi
 
 status=0
-for suite in m1_smoke_test m2_combat_test m3_interaction_test m4_match_test m5_bot_test; do
+for suite in m1_smoke_test m2_combat_test m3_interaction_test m4_match_test m5_bot_test m6_frontend_test; do
 	echo
 	echo "==> Running $suite"
 	if ! "$GODOT" --headless --path "$PROJECT" "res://tests/$suite.tscn"; then

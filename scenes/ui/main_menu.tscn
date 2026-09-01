@@ -1,0 +1,113 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/ui/main_menu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="Style_backdrop"]
+bg_color = Color(0.055, 0.06, 0.083, 1)
+
+[sub_resource type="LabelSettings" id="Label_title"]
+font_size = 96
+font_color = Color(0.96, 0.97, 1, 1)
+outline_size = 14
+outline_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="LabelSettings" id="Label_tagline"]
+font_size = 24
+font_color = Color(0.62, 0.68, 0.82, 1)
+
+[node name="MainMenu" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_menu")
+
+[node name="Backdrop" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("Style_backdrop")
+
+[node name="Layout" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 110
+theme_override_constants/margin_top = 90
+theme_override_constants/margin_right = 110
+theme_override_constants/margin_bottom = 70
+
+[node name="Rows" type="VBoxContainer" parent="Layout"]
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Layout/Rows"]
+text = "RUMBLE ARENA"
+label_settings = SubResource("Label_title")
+
+[node name="Tagline" type="Label" parent="Layout/Rows"]
+text = "Four ninjas. One camera. Everything in the room is a weapon."
+label_settings = SubResource("Label_tagline")
+
+[node name="Menu" type="VBoxContainer" parent="Layout"]
+size_flags_vertical = 6
+theme_override_constants/separation = 14
+
+[node name="Items" type="VBoxContainer" parent="Layout/Menu"]
+theme_override_constants/separation = 6
+
+[node name="Detail" type="Label" parent="Layout/Menu"]
+theme_override_colors/font_color = Color(0.58, 0.63, 0.75, 1)
+theme_override_font_sizes/font_size = 20
+
+[node name="Hint" type="Label" parent="Layout"]
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+theme_override_font_sizes/font_size = 19
+
+[node name="Controls" type="PanelContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("Style_backdrop")
+
+[node name="Margin" type="MarginContainer" parent="Controls"]
+theme_override_constants/margin_left = 110
+theme_override_constants/margin_top = 90
+theme_override_constants/margin_right = 110
+theme_override_constants/margin_bottom = 90
+
+[node name="Rows" type="VBoxContainer" parent="Controls/Margin"]
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="Controls/Margin/Rows"]
+text = "CONTROLS"
+theme_override_font_sizes/font_size = 46
+
+[node name="Body" type="Label" parent="Controls/Margin/Rows"]
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.82, 0.86, 0.95, 1)
+text = "Gamepad     stick or d-pad move    A jump    LT dodge
+                     X light    Y heavy    RB launcher
+                     B grab and interact    LB block
+                     RT signature    R3 ultimate
+
+Keyboard      WASD move    SPACE jump    SHIFT dodge
+                     J light    K heavy    L launcher
+                     U grab    E interact    CTRL block
+                     Q signature    R ultimate
+
+Light three times is punch, punch, KICK -- and the kick throws a
+fireball if the blue meter can pay for it.
+
+Grab beats block. Block beats strikes. Strikes beat grabs.
+
+In the air, light is a jump kick and heavy is a slam that bursts
+where you land.
+
+Interact picks things up. Press it again to throw them. What you
+are allowed to lift depends on your ninja's STRENGTH."
+
+[node name="Back" type="Label" parent="Controls/Margin/Rows"]
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+theme_override_font_sizes/font_size = 19
+text = "[ESC] or [B] to go back"

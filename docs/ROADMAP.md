@@ -486,6 +486,52 @@ Props added at the same time:
   friendly-fire exemption; it is the one object here that does not care whose
   it was.
 
+## A front end
+
+The game booted straight into the arena, which is why joining, picking a ninja
+and starting a fight all happened inside it. Those are three different jobs and
+the arena was the wrong place for two of them: a select prompt floating over a
+fighter's head is what you do when there is nowhere else to put it, and it cost
+the thing a select screen is actually for. Six stats and two named powers do not
+fit above somebody's head, so nobody ever read them -- a roster whose entire
+design is "there are no well-rounded ninjas" was invisible at the one moment it
+mattered.
+
+Now: menu, then character select, then the arena. A router owns one screen at a
+time and knows nothing about what any of them do; screens ask to move on by
+signal, so story mode is a scene and a case in a match statement rather than a
+change to anything that already works. Story is on the menu already, shown
+locked rather than hidden -- the same reasoning as the greyed-out interaction
+prompts, which name the requirement they refuse.
+
+### What this turned up
+
+- **One press of A did three things.** Choosing Local Versus on the menu also
+  took a seat on the select screen and locked it in, because each new
+  InputSource's first poll saw a still-held button as a fresh press. Fixed at
+  the input layer, where it belongs: a source's first poll now carries its held
+  state forward, so a device that was already holding a button when it was
+  handed a seat has not *pressed* it. Taking the seat is kept -- whoever opened
+  the screen sitting down in it is what you want -- but it is one action now.
+- **Starting a match from select gave an empty arena.** The arena spawned
+  fighters on the player_joined signal, and with everyone joining on the screen
+  before it, every one of those had already been emitted by the time it loaded.
+  It now also spawns for seats that were already occupied.
+- **Coming back from a match bounced straight into the next one.** Every seat
+  was still ready, so the select screen emitted its start on the first frame:
+  it appeared and vanished with no moment in which anybody could change their
+  ninja. Seats are un-readied on arrival, which is the point of returning there.
+- **The menus polled input on the render frame.** Everything else in this
+  project consumes input on the physics tick, on purpose -- just-pressed edges
+  are only meaningful at the rate they are produced. The menus now match, which
+  also makes their repeat timing independent of the frame rate.
+
+And two about the tests, both already-known shapes that bit again: a method
+whose signature clashes with the harness's is a parse error, and a parse error
+hangs the run rather than failing it; and a screen looked up by node name comes
+back null when its predecessor is still pending deletion, so the test finds
+screens by the signal they carry instead.
+
 ## The camera was zoomed too far out, and I had said so twice
 
 A standing ninja covered 8.3% of the screen's height with the whole fight in one

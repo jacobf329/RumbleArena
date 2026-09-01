@@ -30,6 +30,12 @@ func _ready() -> void:
 	PlayerManager.player_left.connect(_on_player_left)
 	PlayerManager.join_enabled = true
 
+	# Seats filled before this scene existed. Everybody joins and picks on the
+	# select screen now, so by the time the arena loads every player_joined has
+	# already been emitted -- listening for it alone gave an empty arena.
+	for slot: PlayerSlot in PlayerManager.get_active_slots():
+		_on_player_joined(slot)
+
 
 func _on_player_joined(slot: PlayerSlot) -> void:
 	var definition := CharacterRoster.at(slot.character_index)

@@ -1,0 +1,48 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://src/ui/character_select_screen.gd" id="1_select"]
+
+[sub_resource type="StyleBoxFlat" id="Style_backdrop"]
+bg_color = Color(0.055, 0.06, 0.083, 1)
+
+[sub_resource type="LabelSettings" id="Label_heading"]
+font_size = 44
+font_color = Color(0.96, 0.97, 1, 1)
+
+[node name="CharacterSelectScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_select")
+
+[node name="Backdrop" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("Style_backdrop")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 48.0
+offset_top = 34.0
+offset_right = -48.0
+offset_bottom = -30.0
+theme_override_constants/separation = 14
+
+[node name="Heading" type="Label" parent="Layout"]
+text = "CHOOSE YOUR NINJA"
+label_settings = SubResource("Label_heading")
+
+[node name="Seats" type="HBoxContainer" parent="Layout"]
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="Status" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.86, 0.5, 1)
+
+[node name="Hint" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
