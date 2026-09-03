@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/jinsoku.tres" id="3_jinsoku"]
+
+[sub_resource type="Resource" id="Opponent_jinsoku"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_jinsoku")
+skill = 0.3
+stocks = 1
+note = "Gate guard. Not rewritten. Just doing his job."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "The Outer Steps"
+location = "Shrine approach, first light"
+briefing = "The gate has never been locked. It has never needed to be -- it has Jinsoku, and Jinsoku is never standing where you last looked.\n\nHe has not been rewritten. He is doing his job, and today his job is you.\n\nGo easy. You will want him on your side further up."
+victory = "He goes down laughing and stays down, which is his way of saying he will not be chasing you up the steps.\n\nThe doors are open. The humming starts about here."
+defeat = "You spent the whole fight hitting the place he had just left.\n\nBack down the steps. Again."
+player_stocks = 2
+opponents = Array[Resource]([SubResource("Opponent_jinsoku")])

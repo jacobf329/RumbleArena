@@ -1,0 +1,121 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/ui/story_screen.gd" id="1_story"]
+[ext_resource type="PackedScene" path="res://scenes/ui/character_preview.tscn" id="2_preview"]
+
+[sub_resource type="StyleBoxFlat" id="Style_backdrop"]
+bg_color = Color(0.055, 0.06, 0.083, 1)
+
+[sub_resource type="LabelSettings" id="Label_heading"]
+font_size = 56
+font_color = Color(0.96, 0.97, 1, 1)
+
+[node name="StoryScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_story")
+
+[node name="Backdrop" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("Style_backdrop")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 54.0
+offset_top = 34.0
+offset_right = -54.0
+offset_bottom = -30.0
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Layout"]
+text = "THE REGISTRY"
+label_settings = SubResource("Label_heading")
+
+[node name="Premise" type="Label" parent="Layout"]
+custom_minimum_size = Vector2(0, 96)
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.6, 0.66, 0.8, 1)
+
+[node name="Body" type="HBoxContainer" parent="Layout"]
+size_flags_vertical = 3
+theme_override_constants/separation = 34
+
+[node name="Left" type="VBoxContainer" parent="Layout/Body"]
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.15
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="Layout/Body/Left"]
+text = "CHAPTERS"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+
+[node name="Chapters" type="VBoxContainer" parent="Layout/Body/Left"]
+theme_override_constants/separation = 8
+
+[node name="Detail" type="VBoxContainer" parent="Layout/Body"]
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.4
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Layout/Body/Detail"]
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(1, 0.86, 0.5, 1)
+
+[node name="Location" type="Label" parent="Layout/Body/Detail"]
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.6, 0.66, 0.8, 1)
+
+[node name="Briefing" type="Label" parent="Layout/Body/Detail"]
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.82, 0.86, 0.95, 1)
+
+; Keeps the lineup off the last line of the briefing without widening the gap
+; between every other row in the column.
+[node name="Gap" type="Control" parent="Layout/Body/Detail"]
+custom_minimum_size = Vector2(0, 14)
+
+[node name="Lineup" type="Label" parent="Layout/Body/Detail"]
+theme_override_font_sizes/font_size = 19
+theme_override_colors/font_color = Color(0.94, 0.6, 0.55, 1)
+
+; Takes up whatever is left, so the briefing and the lineup stay together under
+; the chapter title instead of the lineup sinking to the bottom of the column.
+[node name="Spacer" type="Control" parent="Layout/Body/Detail"]
+size_flags_vertical = 3
+
+[node name="Ninja" type="VBoxContainer" parent="Layout/Body"]
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.85
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="Layout/Body/Ninja"]
+text = "YOUR NINJA"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+
+[node name="Preview" parent="Layout/Body/Ninja" instance=ExtResource("2_preview")]
+custom_minimum_size = Vector2(330, 260)
+size_flags_horizontal = 0
+
+[node name="Name" type="Label" parent="Layout/Body/Ninja"]
+theme_override_font_sizes/font_size = 30
+
+[node name="Stats" type="Label" parent="Layout/Body/Ninja"]
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.78, 0.82, 0.92, 1)
+
+[node name="Status" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 23
+theme_override_colors/font_color = Color(1, 0.86, 0.5, 1)
+
+[node name="Hint" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)

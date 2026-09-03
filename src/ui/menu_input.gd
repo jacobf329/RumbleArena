@@ -21,6 +21,19 @@ const REPEAT_RATE := 0.13
 ## How far the stick has to go before it counts as a direction at all.
 const STICK_THRESHOLD := 0.55
 
+## The device that last answered a poll. Story mode seats whoever has been
+## driving the menus rather than asking them to press join on a screen that has
+## been responding to them for five minutes.
+var last_device := InputSource.KEYBOARD_DEVICE
+
+## Cleared after the first poll. Whatever is already down when a screen appears
+## counts as held, not pressed -- the same rule InputSource follows, for the same
+## reason. Without it one press of A walks the whole of story mode: the key is
+## still down when the next screen's first poll runs, that screen sees an edge it
+## never saw begin, and menu -> chapter -> briefing -> fight happens in the time
+## it takes to lift a thumb.
+var _priming := true
+
 var _pads: Dictionary = {}
 var _held: Dictionary = {}
 var _fired: Dictionary = {}
@@ -36,6 +49,7 @@ func poll(delta: float) -> void:
 	for action: Action in [Action.UP, Action.DOWN, Action.LEFT, Action.RIGHT,
 			Action.CONFIRM, Action.BACK]:
 		_update(action, _is_down(action), delta)
+	_priming = false
 
 
 ## True on the frame an action is first pressed, and again on each repeat while
@@ -55,7 +69,7 @@ func _update(action: Action, down: bool, delta: float) -> void:
 		return
 
 	if not was:
-		_fired[action] = true
+		_fired[action] = not _priming
 		_repeat_at[action] = REPEAT_DELAY
 		return
 
@@ -70,7 +84,10 @@ func _update(action: Action, down: bool, delta: float) -> void:
 
 
 func _is_down(action: Action) -> bool:
-	return _keyboard_down(action) or _pad_down(action)
+	if _keyboard_down(action):
+		last_device = InputSource.KEYBOARD_DEVICE
+		return true
+	return _pad_down(action)
 
 
 ## Physical keys, matching KeyboardInputSource. is_key_pressed reads the
@@ -97,25 +114,23 @@ func _keyboard_down(action: Action) -> bool:
 func _pad_down(action: Action) -> bool:
 	for device: int in _pads:
 		var frame: InputFrame = (_pads[device] as GamepadInputSource).frame
+		var down := false
 		match action:
 			Action.UP:
-				if frame.move.y > STICK_THRESHOLD:
-					return true
+				down = frame.move.y > STICK_THRESHOLD
 			Action.DOWN:
-				if frame.move.y < -STICK_THRESHOLD:
-					return true
+				down = frame.move.y < -STICK_THRESHOLD
 			Action.LEFT:
-				if frame.move.x < -STICK_THRESHOLD:
-					return true
+				down = frame.move.x < -STICK_THRESHOLD
 			Action.RIGHT:
-				if frame.move.x > STICK_THRESHOLD:
-					return true
+				down = frame.move.x > STICK_THRESHOLD
 			Action.CONFIRM:
-				if frame.is_held(InputFrame.Action.JUMP):
-					return true
+				down = frame.is_held(InputFrame.Action.JUMP)
 			Action.BACK:
-				if frame.is_held(InputFrame.Action.GRAB):
-					return true
+				down = frame.is_held(InputFrame.Action.GRAB)
+		if down:
+			last_device = device
+			return true
 	return false
 
 

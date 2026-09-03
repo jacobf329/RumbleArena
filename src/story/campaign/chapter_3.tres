@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/yamabuki.tres" id="3_yamabuki"]
+
+[sub_resource type="Resource" id="Opponent_yamabuki"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_yamabuki")
+skill = 0.6
+stocks = 2
+note = "Hers was the first record rewritten. She agrees with it."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "Every Rafter She Owns"
+location = "The prayer hall, forty feet up"
+briefing = "Yamabuki has not touched the floor in two days. She does not have to. The hall is all beam and rafter and she has a line for every one of them.\n\nHers was the first record the Registry rewrote. Whatever it decided she is now, she has agreed with it.\n\nYou will not out-climb her. Make her come down."
+victory = "She comes down the way she always meant to: fast, and at you. It is not enough this time.\n\nShe sits back against a pillar and tells you the smith is on the next floor, and the smith is worse."
+defeat = "She never gave you a straight fight and she was never going to.\n\nWatch where she anchors."
+player_stocks = 3
+opponents = Array[Resource]([SubResource("Opponent_yamabuki")])

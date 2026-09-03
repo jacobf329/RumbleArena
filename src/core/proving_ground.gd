@@ -95,7 +95,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_F2:
 			_add_bot()
 		KEY_F3:
-			PlayerManager.remove_bot()
+			if PlayerManager.join_enabled:
+				PlayerManager.remove_bot()
 		KEY_F5:
 			_reset_positions()
 		KEY_F10:
@@ -114,6 +115,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var button := event as InputEventJoypadButton
 	if button == null or not button.pressed or button.button_index != JOY_BUTTON_BACK:
 		return
+	if not PlayerManager.join_enabled:
+		return
 	if PlayerManager.get_free_slot() == null:
 		PlayerManager.clear_bots()
 	else:
@@ -122,7 +125,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Bots only join between matches. Dropping one in mid-fight would hand it a
 ## full set of stocks against players who have already spent theirs.
+##
+## And never in a story chapter, which is a designed fight: the same flag that
+## keeps a spare pad out keeps a spare CPU out, since both are somebody adding a
+## fifth opinion to a lineup that was authored.
 func _add_bot() -> void:
+	if not PlayerManager.join_enabled:
+		return
 	if _match.phase == MatchManager.Phase.WAITING or _match.phase == MatchManager.Phase.COUNTDOWN:
 		PlayerManager.add_bot()
 

@@ -1,0 +1,87 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/ui/briefing_screen.gd" id="1_briefing"]
+[ext_resource type="PackedScene" path="res://scenes/ui/character_preview.tscn" id="2_preview"]
+
+[sub_resource type="StyleBoxFlat" id="Style_backdrop"]
+bg_color = Color(0.045, 0.05, 0.072, 1)
+
+[sub_resource type="LabelSettings" id="Label_title"]
+font_size = 54
+font_color = Color(0.96, 0.97, 1, 1)
+
+[node name="BriefingScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_briefing")
+
+[node name="Backdrop" type="Panel" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_styles/panel = SubResource("Style_backdrop")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 80.0
+offset_top = 44.0
+offset_right = -80.0
+offset_bottom = -34.0
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Layout"]
+label_settings = SubResource("Label_title")
+
+[node name="Location" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.6, 0.66, 0.8, 1)
+
+[node name="Briefing" type="Label" parent="Layout"]
+custom_minimum_size = Vector2(0, 190)
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 21
+theme_override_colors/font_color = Color(0.86, 0.9, 0.97, 1)
+
+[node name="Body" type="HBoxContainer" parent="Layout"]
+size_flags_vertical = 3
+theme_override_constants/separation = 46
+
+[node name="Lineup" type="VBoxContainer" parent="Layout/Body"]
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.6
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="Layout/Body/Lineup"]
+text = "AGAINST"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+
+[node name="Rows" type="VBoxContainer" parent="Layout/Body/Lineup"]
+theme_override_constants/separation = 16
+
+[node name="You" type="VBoxContainer" parent="Layout/Body"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="Layout/Body/You"]
+text = "YOU"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)
+
+[node name="Preview" parent="Layout/Body/You" instance=ExtResource("2_preview")]
+custom_minimum_size = Vector2(330, 260)
+size_flags_horizontal = 0
+
+[node name="Name" type="Label" parent="Layout/Body/You"]
+theme_override_font_sizes/font_size = 30
+
+[node name="Stocks" type="Label" parent="Layout/Body/You"]
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.78, 0.82, 0.92, 1)
+
+[node name="Hint" type="Label" parent="Layout"]
+theme_override_font_sizes/font_size = 19
+theme_override_colors/font_color = Color(0.5, 0.55, 0.66, 1)

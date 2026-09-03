@@ -25,7 +25,7 @@ func _run() -> void:
 
 	_section("Main menu")
 	_test_it_opens_on_the_menu()
-	await _test_the_cursor_skips_what_is_locked()
+	await _test_the_cursor_walks_the_menu()
 	await _test_choosing_versus_opens_select()
 
 	_section("Character select")
@@ -50,18 +50,24 @@ func _test_it_opens_on_the_menu() -> void:
 	_check(_menu() != null, "the menu screen is up")
 
 
-## Story is shown rather than hidden -- a menu with one item on it says nothing
-## about the game -- so the cursor has to step over it rather than stop on it.
-func _test_the_cursor_skips_what_is_locked() -> void:
+## Both modes are open now that story mode exists, so what is left to check is
+## the rule rather than a particular locked item: the cursor must only ever come
+## to rest on an entry that will answer, whatever the menu happens to hold.
+func _test_the_cursor_walks_the_menu() -> void:
 	var menu := _menu()
 	_check(menu._cursor == 0, "the cursor starts on Local Versus")
-	_check(not menu.ITEMS[1]["enabled"], "Story is present and locked")
-
 	await _press_key(KEY_S)
-	_check(menu._cursor == 2,
-		"pressing down lands on Controls, stepping over Story (cursor %d)" % menu._cursor)
+	_check(menu._cursor == 1, "pressing down moves to Story (cursor %d)" % menu._cursor)
+	_check(menu.ITEMS[1]["enabled"], "which is no longer coming soon")
 	await _press_key(KEY_W)
 	_check(menu._cursor == 0, "and back up again")
+
+	for step in menu.ITEMS.size():
+		menu._move(1)
+		_check(menu.ITEMS[menu._cursor]["enabled"],
+			"step %d lands on something that answers: %s"
+				% [step + 1, menu.ITEMS[menu._cursor]["label"]])
+	_check(menu._cursor == 0, "and a full lap comes back where it started")
 
 
 func _test_choosing_versus_opens_select() -> void:

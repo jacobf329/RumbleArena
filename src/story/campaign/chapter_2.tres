@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/jinsoku.tres" id="3_jinsoku"]
+[ext_resource type="Resource" path="res://src/characters/roster/yamabuki.tres" id="4_yamabuki"]
+
+[sub_resource type="Resource" id="Opponent_jinsoku"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_jinsoku")
+skill = 0.35
+stocks = 1
+note = "Followed you in. Says he is helping."
+
+[sub_resource type="Resource" id="Opponent_yamabuki"]
+script = ExtResource("2_opponent")
+character = ExtResource("4_yamabuki")
+skill = 0.35
+stocks = 1
+note = "On the racks, not the floor. Comes down hard."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "The Rack Rows"
+location = "Second gallery, between the cold aisles"
+briefing = "Somebody bolted four hundred server racks over a prayer hall and left the pillars standing where they were. The Registry runs hot. The aisles run cold.\n\nTwo of them are in there and neither is themselves this morning.\n\nThere is more loose in this room than there are people in it. Pick something up."
+victory = "Both down. The racks carry on as though nothing happened, which is the part that stays with you."
+defeat = "Two on one, in a room you did not use.\n\nThe barrels were right there."
+player_stocks = 3
+opponents = Array[Resource]([SubResource("Opponent_jinsoku"), SubResource("Opponent_yamabuki")])

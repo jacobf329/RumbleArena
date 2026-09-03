@@ -249,6 +249,7 @@ src/
   interactables/ interactable base + Liftable/Climbable/Hackable/Breakable/Hazard
   camera/        arena_camera
   ui/            hud, player_hud, character_select, prompt
+  story/         campaign + chapter resources, progress save
   arenas/        arena base + server_shrine
 scenes/          composed .tscn files
 tests/           GUT-style headless test scenes
@@ -277,7 +278,59 @@ their transitions. This is the single biggest defense against the
 
 ---
 
-## 11. What "done" looks like for the slice
+## 11. Story mode — "The Registry"
+
+Single player, six chapters, any ninja on the roster. It exists to give the
+game a reason to be played alone, and to give the stat system something to be
+*about*.
+
+**The premise.** Every ninja alive is a row in the Registry: a name, a clan, and
+the six numbers that decide what they are permitted to do. The machine that
+holds it sits in the old shrine, behind a floor of server racks somebody bolted
+over the prayer hall — the same Server Shrine from §6. Null deleted her own row
+eight days ago, and since then the Registry has been rewriting everyone else's.
+
+This is deliberately the stat system pointed at itself. §3 says stats are
+permission checks; the campaign asks who is doing the permitting. The final
+fight is against the character whose whole design is being absent from the
+system, standing in front of the thing that assigns it.
+
+**Structure.** Each chapter names its opponents (roster resources, not indices),
+a skill number for each, and how many stocks everybody gets. Difficulty is
+authored out of those three, never out of giving the AI rules the player cannot
+see — a story opponent is the same `BotInputSource` that fills a versus bench,
+driving the same fighter through the same buttons.
+
+| # | Chapter | Against | You get |
+|---|---|---|---|
+| 1 | The Outer Steps | Jinsoku x1 | 2 stocks |
+| 2 | The Rack Rows | Jinsoku x1, Yamabuki x1 | 3 stocks |
+| 3 | Every Rafter She Owns | Yamabuki x2 | 3 stocks |
+| 4 | Ironjaw | Kurogane x3 | 3 stocks |
+| 5 | Three Names Struck Out | Jinsoku, Yamabuki, Kurogane, x1 each | 4 stocks |
+| 6 | The Empty Record | Null x3 | 3 stocks |
+
+**Consequences of doing it this way.** A story fight is not a second kind of
+match: it is the four normal seats, filled from a resource instead of by four
+people pressing buttons. The one rule the match layer gained is that a seat can
+carry its own stock count, which is what makes an asymmetric chapter data rather
+than code. Everything else — camera, HUD, arena, powers, props — is the versus
+game, unmodified.
+
+**Locked chapters are shown, and can be selected.** Confirming one refuses and
+names what has to be cleared first, exactly like a denied interaction prompt
+(§3). Progress is a single integer in `user://`, so it survives an update, and
+so a save can never reach a state where a later chapter is open and an earlier
+one is not.
+
+**Not yet.** One arena for all six chapters; the locations are named but not
+built. Cutscenes are a title, a paragraph and a lineup on a briefing page. Both
+are the right amount of scaffolding to find out whether the campaign is worth
+building levels for.
+
+---
+
+## 12. What "done" looks like for the slice
 
 Four controllers plugged in, two of the four picking Kurogane and Null, fighting
 in The Server Shrine. Kurogane rips out a pillar and throws it. Null blinks

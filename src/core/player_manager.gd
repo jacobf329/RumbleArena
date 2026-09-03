@@ -133,8 +133,28 @@ func clear_seats() -> void:
 		slot.source = null
 		slot.is_ready = false
 		slot.character_index = slot.index
+		slot.stock_override = 0
 		_was_awaiting[slot.index] = false
 		player_left.emit(slot)
+
+
+## Seats a specific device without waiting for it to press join.
+##
+## Story mode needs this: there is one human, they have already been driving the
+## menus, and asking them to press A again on a screen that has been answering
+## them for five minutes would be asking them to prove they are there. Returns
+## the seat the device is already in if it has one.
+func seat_device(device_id: int) -> PlayerSlot:
+	for slot in slots:
+		if slot.source != null and slot.source.owns_device(device_id):
+			return slot
+	var slot := get_free_slot()
+	if slot == null:
+		return null
+	slot.source = KeyboardInputSource.new() if device_id == InputSource.KEYBOARD_DEVICE \
+		else GamepadInputSource.new(device_id)
+	player_joined.emit(slot)
+	return slot
 
 
 func get_bot_count() -> int:

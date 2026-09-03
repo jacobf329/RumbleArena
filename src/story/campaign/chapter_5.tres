@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/jinsoku.tres" id="3_jinsoku"]
+[ext_resource type="Resource" path="res://src/characters/roster/yamabuki.tres" id="4_yamabuki"]
+[ext_resource type="Resource" path="res://src/characters/roster/kurogane.tres" id="5_kurogane"]
+
+[sub_resource type="Resource" id="Opponent_jinsoku"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_jinsoku")
+skill = 0.55
+stocks = 1
+note = "Struck out at 06:14."
+
+[sub_resource type="Resource" id="Opponent_yamabuki"]
+script = ExtResource("2_opponent")
+character = ExtResource("4_yamabuki")
+skill = 0.55
+stocks = 1
+note = "Struck out at 06:14."
+
+[sub_resource type="Resource" id="Opponent_kurogane"]
+script = ExtResource("2_opponent")
+character = ExtResource("5_kurogane")
+skill = 0.6
+stocks = 1
+note = "Struck out at 06:15. Took longer."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "Three Names Struck Out"
+location = "Core antechamber"
+briefing = "All three of them, and their rows are not edited now. They are deleted -- the way Null deleted hers, except nobody asked them first.\n\nA deleted ninja is not permitted to exist. They have about four minutes each to prove otherwise and they have decided to do it on you.\n\nOne stock apiece. They will not come at you one at a time."
+victory = "Three names, struck out, lying down.\n\nThe antechamber door was never locked either. She has wanted you to get this far since the outer steps."
+defeat = "Three of them and one room.\n\nStop standing in the middle of it."
+player_stocks = 4
+opponents = Array[Resource]([SubResource("Opponent_jinsoku"), SubResource("Opponent_yamabuki"), SubResource("Opponent_kurogane")])

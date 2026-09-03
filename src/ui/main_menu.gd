@@ -1,17 +1,20 @@
 ## The front door.
 ##
-## Deliberately shows the locked entries rather than hiding them: a menu with
-## one item on it tells you nothing about what the game is going to be, and
-## "Story  --  coming soon" is information. The same reasoning as the greyed-out
-## interaction prompts in the arena, which name the requirement they refuse.
+## Entries carry an enabled flag and the cursor steps over anything locked. Both
+## modes are open now, but the flag stays: it is how a mode that is announced and
+## not yet finished gets shown rather than hidden -- a menu with one item on it
+## says nothing about what the game is going to be. The same reasoning as the
+## greyed-out interaction prompts in the arena, which name the requirement they
+## refuse rather than vanishing.
 extends Control
 
 signal play_requested
+signal story_requested
 signal quit_requested
 
 const ITEMS := [
 	{"label": "Local Versus", "detail": "Up to four ninjas, one screen, one camera.", "enabled": true},
-	{"label": "Story", "detail": "Coming soon.", "enabled": false},
+	{"label": "Story", "detail": "The Registry. Six floors, one ninja, everyone in the building rewritten.", "enabled": true},
 	{"label": "Controls", "detail": "How to play.", "enabled": true},
 	{"label": "Quit", "detail": "", "enabled": true},
 ]
@@ -76,6 +79,8 @@ func _choose() -> void:
 	match ITEMS[_cursor]["label"]:
 		"Local Versus":
 			play_requested.emit()
+		"Story":
+			story_requested.emit()
 		"Controls":
 			_showing_controls = true
 			_controls_panel.show()

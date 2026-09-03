@@ -73,6 +73,21 @@ somebody's head, so nobody ever read them:
 
 ![Character select](docs/images/m6-character-select.png)
 
+There is a story mode as well: **The Registry**, six chapters for one player.
+Every ninja alive is a row in a machine that decides, rather than records, what
+they are permitted to do — six numbers assigned at eight years old, no appeal.
+Null deleted her own row, the machine started rewriting everyone else's, and the
+climb to the core goes through people who have already been rewritten. It is the
+stat system pointed at itself.
+
+A chapter names its opponents, how sharp they are and how many stocks everybody
+gets, and the router fills the same four seats versus uses. Nothing about a
+story fight is a second kind of match.
+
+![Chapter select](docs/images/m7-chapters.png)
+
+![A briefing](docs/images/m7-briefing-gauntlet.png)
+
 ## Playing it
 
 ### Windows — the short version
@@ -362,7 +377,8 @@ headlessly with no hardware.
 | `src/powers/` | Power base class and per-character powers |
 | `src/interactables/` | Permission rule, liftables, breakables, hackable turrets |
 | `src/camera/` | Shared smart arena camera |
-| `src/ui/` | HUD, character select, contextual prompts |
+| `src/ui/` | HUD, menus, character select, contextual prompts |
+| `src/story/` | Campaign, chapters and opponents as resources; progress save |
 | `src/arenas/` | Arena scenes |
 | `tests/` | Headless validation scenes |
 | `tools/` | Asset pipeline: GLB stripper, animation library builder, impact analysis |

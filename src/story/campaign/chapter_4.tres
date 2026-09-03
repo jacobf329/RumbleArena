@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/kurogane.tres" id="3_kurogane"]
+
+[sub_resource type="Resource" id="Opponent_kurogane"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_kurogane")
+skill = 0.7
+stocks = 3
+note = "Slow. Not slow enough to be safe."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "Ironjaw"
+location = "The forge landing"
+briefing = "Kurogane left the forge-smiths because they wanted his hands. The Registry wants the rest of him.\n\nHis row reads STRENGTH 5, TOUGHNESS 5, and a clan he walked out of nineteen years ago. He has stopped arguing with it.\n\nNothing you pick up on this landing will be light."
+victory = "He goes down on one knee, then the other, then not at all.\n\nHe says one thing before the landing goes quiet. It is not the machine doing this. Somebody is asking it to."
+defeat = "You traded with a man built out of a forge.\n\nDo not trade."
+player_stocks = 3
+opponents = Array[Resource]([SubResource("Opponent_kurogane")])

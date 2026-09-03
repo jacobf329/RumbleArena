@@ -49,7 +49,7 @@ func register(fighter: Fighter) -> void:
 		return
 	var index := fighter.slot.index
 	_fighters[index] = fighter
-	_stocks[index] = stocks_per_player
+	_stocks[index] = _stocks_for(fighter.slot)
 	fighter.defeated.connect(_on_fighter_defeated.bind(fighter))
 
 	# A player who joins during the countdown restarts it; one who joins
@@ -76,6 +76,15 @@ func unregister(fighter: Fighter) -> void:
 		var living := get_living_slots()
 		if living.size() <= 1:
 			_end_match(living[0] if living.size() == 1 else null)
+
+
+## How many stocks one seat gets. Equal for everybody in versus; a story chapter
+## sets its own per seat, which is how "you have three lives, he has one" is
+## authored as data rather than as a second kind of match.
+func _stocks_for(slot: PlayerSlot) -> int:
+	if slot != null and slot.stock_override > 0:
+		return slot.stock_override
+	return stocks_per_player
 
 
 func get_stocks(index: int) -> int:
@@ -140,8 +149,8 @@ func refresh_readiness() -> void:
 
 func _begin_fight() -> void:
 	for index: int in _fighters:
-		_stocks[index] = stocks_per_player
 		var fighter := _fighters[index] as Fighter
+		_stocks[index] = _stocks_for(fighter.slot)
 		fighter.respawn()
 		fighter.grant_invulnerability(respawn_invulnerable_ticks)
 	time_left = match_seconds
@@ -202,7 +211,7 @@ func _reset_to_waiting() -> void:
 	for index: int in _fighters:
 		var fighter := _fighters[index] as Fighter
 		fighter.restore()
-		_stocks[index] = stocks_per_player
+		_stocks[index] = _stocks_for(fighter.slot)
 	winner = null
 	for index: int in _fighters:
 		var fighter := _fighters[index] as Fighter

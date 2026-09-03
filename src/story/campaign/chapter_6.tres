@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StoryChapter" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/story/story_chapter.gd" id="1_chapter"]
+[ext_resource type="Script" path="res://src/story/story_opponent.gd" id="2_opponent"]
+[ext_resource type="Resource" path="res://src/characters/roster/null.tres" id="3_null"]
+
+[sub_resource type="Resource" id="Opponent_null"]
+script = ExtResource("2_opponent")
+character = ExtResource("3_null")
+skill = 0.85
+stocks = 3
+note = "No row. No record. Standing there anyway."
+
+[resource]
+script = ExtResource("1_chapter")
+title = "The Empty Record"
+location = "The Registry core"
+briefing = "She is standing in front of the core with her hands down.\n\nShe deleted herself eight days ago and has been rewriting everyone else since, and the reason is on the screen behind her in a font nobody has used in thirty years. The Registry does not record what you are. It decides. Six numbers, assigned at eight years old, no appeal.\n\nShe is not going to argue about it. She would like you to stop her, if you can. That is also an answer."
+victory = "She lets the last one land.\n\nThe core is still humming when she says it: your row is still in there. You can delete it, or you can be the one who says what goes in it. She does not tell you which.\n\nTHE END -- for now."
+defeat = "She steps out of the room the way she steps out of every room.\n\nThe core keeps writing."
+player_stocks = 3
+opponents = Array[Resource]([SubResource("Opponent_null")])

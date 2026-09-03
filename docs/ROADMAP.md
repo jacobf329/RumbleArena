@@ -700,6 +700,60 @@ down on every frame that `PlayerManager` exists. If the scripts do not load, the
 label is still there and the failure explains itself. That is the only kind of
 error message that survives its own cause.
 
+## Story mode
+
+Six chapters, one ninja of your choosing, and the arena's own bots on the other
+side. The campaign is called The Registry: every ninja alive is a row in a
+machine that decides, rather than records, what they are permitted to do -- six
+numbers assigned at eight years old, no appeal. Null deleted her own row and has
+been rewriting everyone else's since, and the climb to the core is through
+people who have already been rewritten. That premise exists to make the stat
+system the *subject* of the story rather than a mechanic underneath it: the
+thing you fight your way toward is the thing that assigns the stat block.
+
+Nothing about a story fight is a second kind of match. A chapter names its
+opponents as roster resources, hands each a skill number, and says how many
+stocks everybody gets; the router then fills the same four seats versus uses,
+with `add_bot` for the opposition and the same arena, camera, HUD and match
+manager. The only new rule underneath is that a seat can carry its own stock
+count, which is what makes "you have two lives, he has one" authorable as data.
+
+Chapters, opponents and the campaign are `.tres` files. Adding chapter seven is
+authoring one, exactly as adding a ninja is authoring one -- if it ever needs a
+code change, the abstraction is wrong.
+
+**Locked chapters are shown, and the cursor can stop on them.** Confirming one
+refuses and names the chapter you have to clear first. This is the same call the
+interaction prompts make: being told no, with the reason attached, teaches the
+shape of the thing, and a list that hid the climb would say nothing about how
+long it is.
+
+### What this turned up
+
+- **One press of SPACE would have walked the entire mode.** Menu, chapter,
+  briefing and the opening bell all confirm with the same button, and each
+  screen's MenuInput started with an empty held-state map -- so a key still down
+  when the next screen appeared read there as a fresh press. A player would have
+  tapped SPACE on the main menu and arrived in a fight, having seen neither the
+  chapter list nor the briefing. This is the *same* bug as "one press of A did
+  three things" from the front-end pass, in the one input path that had not been
+  primed: `InputSource` learned it then, `MenuInput` had not. Found by writing
+  the test that drives the screens with real key events, before it ever reached
+  a person.
+- **The winner has to be read on the frame the phase turns.** The match clears
+  its own winner seven seconds into VICTORY to set up a rematch. Reading it
+  after the outcome screen's linger would have reported every chapter, won or
+  lost, as a loss.
+- **Story progress had to be given an off switch before the first test run.**
+  The suite drives the real campaign through real wins, and a save file written
+  to `user://` by a test is a test that can delete somebody's progress by being
+  run. It writes to memory unless `persist` says otherwise.
+
+The three states of the chapter list -- cleared, next, locked -- and both
+briefing layouts are captured in `docs/images/m7-*.png` by
+`tools/capture_story.tscn`, because a screen full of prose is the kind of thing
+that only looks wrong when you look at it.
+
 ## Working practices
 
 - **Headless validation every commit.** `./run_tests.sh` imports the project

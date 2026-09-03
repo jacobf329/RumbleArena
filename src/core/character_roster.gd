@@ -23,3 +23,19 @@ static func at(index: int) -> CharacterDef:
 ## Wraps in both directions, so cycling never dead-ends at either end.
 static func step(index: int, direction: int) -> int:
 	return wrapi(index + direction, 0, PATHS.size())
+
+
+## Which seat number picks this ninja. Story chapters name their opponents by
+## resource rather than by index -- an index in a .tres would silently mean
+## somebody else the first time the roster is reordered.
+static func index_of(definition: CharacterDef) -> int:
+	if definition == null:
+		return 0
+	for i in PATHS.size():
+		if at(i) == definition:
+			return i
+	# A second copy of the same resource is still that ninja.
+	for i in PATHS.size():
+		if at(i).display_name == definition.display_name:
+			return i
+	return 0

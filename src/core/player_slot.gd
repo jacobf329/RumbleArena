@@ -13,6 +13,12 @@ var color: Color = Color.WHITE
 var character_index: int = 0
 var is_ready: bool = false
 
+## Stocks this seat gets instead of the match default, or 0 for the default.
+## Story mode is the reason it exists: a chapter where you have three lives and
+## the boss has one is authored by the chapter, and a single number on the match
+## cannot say that. Versus never sets it, so everyone there still shares one.
+var stock_override: int = 0
+
 
 func _init(slot_index: int, slot_color: Color) -> void:
 	index = slot_index
