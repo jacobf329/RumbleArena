@@ -39,4 +39,22 @@ rm -f "$probe"
 #    (Touching nothing else: the probe's own mtime is gone with it.)
 "$CHECK" "$PROJECT" || fail "the check stayed stale after the probe was removed."
 
-echo "Cache guard: catches a stale class cache."
+# 4. An asset that landed after the last import reads as stale too. Separate
+#    from case 2 because it is a separate half of the check and it has been
+#    wrong in both directions: it used to measure against the class cache alone,
+#    which Godot only rewrites when the list of classes changes -- so an update
+#    that added art and no new class_name looked stale forever and re-imported
+#    on every launch, and fixing that could just as easily have neutered the
+#    half that catches real new art.
+asset="$PROJECT/assets/_cache_guard_probe.png"
+# A 1x1 PNG, so Godot has something real to import if this is ever left behind.
+printf '\211PNG\r\n\032\n\0\0\0\rIHDR\0\0\0\1\0\0\0\1\10\6\0\0\0\37\25\304\211\0\0\0\nIDATx\234c\0\1\0\0\5\0\1\r\n-\264\0\0\0\0IEND\256B\140\202' > "$asset"
+if "$CHECK" "$PROJECT"; then
+	rm -f "$asset"
+	fail "an asset newer than the last import was NOT detected."
+fi
+rm -f "$asset"
+
+"$CHECK" "$PROJECT" || fail "the check stayed stale after the asset probe was removed."
+
+echo "Cache guard: catches a stale class cache and unimported art."

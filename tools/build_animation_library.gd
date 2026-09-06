@@ -49,19 +49,14 @@ const PACKS := {
 			"shoulder_throw": "throw",
 			"spin_jump": "crane_kick",
 		},
-		# The rig these clips are for, so a borrowed clip can be retargeted onto
-		# it.
 		"model": "res://assets/characters/armored_ninja/armored_ninja.glb",
 		# This pack has no walk cycle, and its run is a deep forward-leaning
 		# crouch -- played slowly for standing still it left Kurogane a head
-		# shorter than everyone else. So the walk is borrowed, which needs the
-		# retarget below: the two rigs share every bone name but not their rest
-		# poses, and dropped in raw the clip posed him in a permanent hunch.
+		# shorter than everyone else. So the walk is borrowed from the other
+		# pack, which works because the two rigs share all 24 bone names: a bone
+		# track is an absolute local pose and carries across as-is.
 		"borrow": {
-			"walk": {
-				"clip": "res://assets/characters/ninja/animations/walk.glb",
-				"from": "res://assets/characters/ninja/ninja_model.glb",
-			},
+			"walk": {"clip": "res://assets/characters/ninja/animations/walk.glb"},
 		},
 	},
 }
@@ -99,11 +94,7 @@ func _build(pack: String) -> bool:
 		var borrowed := _one_clip(loan["clip"])
 		if borrowed == null:
 			return false
-		var moved := _retarget(borrowed, loan["from"], spec["model"])
-		if moved < 0:
-			return false
-		print("  %-20s borrowed from %s, %d tracks retargeted"
-			% [key, String(loan["clip"]).get_file(), moved])
+		print("  %-20s borrowed from %s" % [key, String(loan["clip"]).get_file()])
 		sources[key] = borrowed
 
 	var keys := sources.keys()
@@ -188,108 +179,13 @@ func _from_glb(path: String) -> Dictionary:
 		if name == "RESET":
 			continue
 		var animation: Animation = player.get_animation(name).duplicate(true)
-		var rebased := _rebase_to_skeleton(animation)
+		var rebased := AnimationRetarget.rebase_to_skeleton(animation)
 		_flatten_root_motion(animation)
 		out[name] = animation
 		if rebased == 0:
 			push_warning("%s: no skeleton tracks rebased" % name)
 	scene.free()
 	return out
-
-
-## "Armature/Skeleton3D:Hips" and "target_character/Skeleton3D:Hips" both become
-## ":Hips", which resolves against whatever Skeleton3D the player is parented to.
-## A track that does not address a skeleton is left alone and reported, because
-## it will not survive the move and somebody should know.
-func _rebase_to_skeleton(animation: Animation) -> int:
-	var changed := 0
-	for track in animation.get_track_count():
-		var path := String(animation.track_get_path(track))
-		var colon := path.find(":")
-		if colon < 0:
-			continue
-		var node := path.substr(0, colon)
-		var bone := path.substr(colon + 1)
-		if not node.ends_with("Skeleton3D"):
-			push_warning("track '%s' does not address a skeleton; left as-is" % path)
-			continue
-		animation.track_set_path(track, NodePath(":" + bone))
-		changed += 1
-	return changed
-
-
-## Rewrites a clip built for one rig so it poses another the way it posed the
-## first.
-##
-## A bone track stores an absolute local pose, not a delta from the rest pose, so
-## dropping a clip onto a rig whose rest differs imposes the first rig's pose on
-## the second and the result is off by exactly that difference. These two rigs
-## share all 24 bone names and sit up to 110 degrees apart at the hips and
-## thighs, which is the difference between a ninja standing up and a ninja bent
-## double.
-##
-## The fix is to read the clip as a delta and re-apply it: take the rotation
-## away from the source rest, then hang it on the target rest. Positions keep
-## their offset from rest and rebase onto the target's, which matters only for
-## the hips -- every other bone's position track is the bone length holding
-## still.
-func _retarget(animation: Animation, from_model: String, to_model: String) -> int:
-	var source := _skeleton(from_model)
-	var target := _skeleton(to_model)
-	if source == null or target == null:
-		push_error("retarget: could not load both skeletons")
-		return -1
-
-	var moved := 0
-	for track in animation.get_track_count():
-		var path := String(animation.track_get_path(track))
-		var bone := path.substr(path.find(":") + 1)
-		var from_bone := source.find_bone(bone)
-		var to_bone := target.find_bone(bone)
-		if from_bone < 0 or to_bone < 0:
-			push_warning("retarget: '%s' is not on both rigs; track left alone" % bone)
-			continue
-		var from_rest := source.get_bone_rest(from_bone)
-		var to_rest := target.get_bone_rest(to_bone)
-
-		match animation.track_get_type(track):
-			Animation.TYPE_ROTATION_3D:
-				var undo := from_rest.basis.get_rotation_quaternion().inverse()
-				var redo := to_rest.basis.get_rotation_quaternion()
-				for key in animation.track_get_key_count(track):
-					var pose: Quaternion = animation.track_get_key_value(track, key)
-					animation.track_set_key_value(track, key, redo * undo * pose)
-				moved += 1
-			Animation.TYPE_POSITION_3D:
-				for key in animation.track_get_key_count(track):
-					var pose: Vector3 = animation.track_get_key_value(track, key)
-					animation.track_set_key_value(track, key,
-						to_rest.origin + (pose - from_rest.origin))
-				moved += 1
-
-	_free_tree(source)
-	_free_tree(target)
-	return moved
-
-
-## Frees the holder the skeleton was instantiated under, not just its parent:
-## the skeleton sits several nodes deep and freeing the wrong one leaks the rest.
-func _free_tree(node: Node) -> void:
-	var root := node
-	while root.get_parent() != null:
-		root = root.get_parent()
-	root.free()
-
-
-func _skeleton(model_path: String) -> Skeleton3D:
-	var packed: PackedScene = load(model_path)
-	if packed == null:
-		return null
-	var model := packed.instantiate()
-	# Parented so the skeleton can be freed by way of the model it belongs to.
-	var holder := Node3D.new()
-	holder.add_child(model)
-	return model.find_child("Skeleton3D", true, false) as Skeleton3D
 
 
 ## Pins the hips' horizontal translation to its first key, leaving Y alone.

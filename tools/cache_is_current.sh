@@ -31,12 +31,23 @@ done < <(grep -rhoE '^[[:space:]]*class_name[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' 
 # imported .glb and .png live in .godot too, and a missing one fails at load
 # rather than at compile.
 #
+# Measured against the most recent sign of an import rather than against the
+# class cache alone. Godot only rewrites global_script_class_cache.cfg when the
+# list of classes changes, so an update that adds art and no new class_name
+# leaves that file with an old timestamp and every new .png looks like it landed
+# afterwards -- permanently stale, re-importing on every single launch. The uid
+# cache is rewritten by any import, so the newer of the two is what "the assets
+# were last prepared" actually means.
+REFERENCE="$CACHE"
+UID_CACHE="$PROJECT/.godot/uid_cache.bin"
+[ -f "$UID_CACHE" ] && [ "$UID_CACHE" -nt "$REFERENCE" ] && REFERENCE="$UID_CACHE"
+
 # Whitelisted by extension rather than "everything except X". Godot rewrites
-# .import files as part of importing, so anything-newer-than-the-cache is
+# .import files as part of importing, so anything-newer-than-the-reference is
 # permanently true the moment an import finishes -- a check that can never pass
 # is worse than no check, because it sends the launcher round the same loop
 # every single launch.
-newer="$(find "$PROJECT" -type f -newer "$CACHE" \
+newer="$(find "$PROJECT" -type f -newer "$REFERENCE" \
 	-not -path "*/.godot/*" -not -path "*/.git/*" \
 	\( -name '*.gd' -o -name '*.tscn' -o -name '*.tres' -o -name '*.gdshader' \
 	   -o -name '*.glb' -o -name '*.gltf' -o -name '*.png' -o -name '*.jpg' \

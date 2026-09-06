@@ -772,20 +772,40 @@ library builder now rewrites every bone track to `:Bone` and `FighterVisual`
 plays clips from an `AnimationPlayer` parented to the `Skeleton3D`, so the
 prefix stops being part of the question.
 
-**Same bone names is necessary and not sufficient.** A bone track stores an
-absolute local pose, not a delta from rest, so a clip dropped onto a rig with a
-different rest pose imposes the first rig's pose on the second. These two rigs
-share all 24 bone names and sit up to 110 degrees apart at the hips and thighs.
-The armoured pack has no walk cycle, so I borrowed the other pack's -- and got a
-Kurogane who fought in a permanent hunch, a head shorter than everyone else,
-with nothing logged. The builder retargets a borrowed clip now: rotation away
-from the source rest, onto the target rest. His walk is the other pack's walk,
-retargeted.
+**Same bone names turns out to be sufficient, and I got that wrong once in
+between.** The two rigs' rest poses differ by up to 110 degrees at the hips and
+thighs, the armoured pack has no walk cycle, and when I borrowed the other
+pack's the result looked wrong on screen -- so I wrote a retarget: read the pose
+as a delta from the source rest, hang it on the target's. It appeared to fix it,
+and I shipped it and said so in the docs.
 
-Neither failure is visible to a test that asserts a clip loaded, so
+It was wrong. A bone track stores an absolute local pose, which *replaces* rest
+rather than adding to it, so the pose carries across exactly and the rest
+difference never enters into it. Measuring rather than looking: play a clip on
+the rig it was authored on and on the other, and the bones land within 14.0
+degrees of each other on average -- the same 14.0 in both directions, because
+that residual is the two bodies being different shapes rather than any error.
+The retarget moved it to 10.3 carrying a walk one way and to 38.2 carrying a
+kick the other. A correct transform would be symmetric; one that flatters in one
+direction and wrecks the other is wrong and got lucky. (It corrected for the
+bone's own rest and not its parent's, which is not a retarget.) It is gone, and
+Kurogane's walk is the other pack's walk dropped in unchanged.
+
+The lesson is not "measure instead of looking" -- looking is what caught the
+first bug. It is that a screenshot tells you something is wrong and never tells
+you what, and I treated a plausible cause that made the picture better as a
+confirmed one. `AnimationRetarget.pose_disagreement` is the number that would
+have refused the fix in ten seconds: it reports zero for a rig against itself,
+so a change that makes one direction better and the other worse has nowhere to
+hide.
+
+Neither is visible to a test that asserts a clip loaded, so
 `tools/check_retarget.gd` asserts what actually matters -- that the skeleton
-*moved* -- for every library against every model, then compares rest poses and
-says which rigs may share clips. It runs in `./run_tests.sh`.
+*moved* -- for every library against every model, then plays one clip on both
+rigs and reports how far apart they land. It takes a model path too, so a model
+from anywhere can be checked before any of it is wired up. It runs in
+`./run_tests.sh`, and `tools/compare_retarget.tscn` renders the same question as
+a picture.
 
 **Two smaller things.** A moveset carries the moment of contact in each clip, in
 seconds, which is specific to the clip it was measured on: Kurogane's ultimate
@@ -805,6 +825,27 @@ it now, `CharacterDef` points at one, and `FighterVisual` builds the model at
 runtime. Which incidentally surfaced that the select screen had been handed the
 character definition and ignoring it: with one model, nobody could see that the
 preview was showing the default rather than your pick.
+
+## A launcher that would have re-imported on every single launch
+
+Adding the portability screenshot to `docs/` made the stale-cache guard fail,
+and it was not the screenshot's fault. The guard has two halves: every declared
+`class_name` must be in the cache, and no asset may be newer than it. The second
+half measured against `global_script_class_cache.cfg`, which Godot only rewrites
+when the *list of classes* changes -- so any update that added art and no new
+class would leave that file with an old timestamp, every new .png would look
+like it landed afterwards, and the launcher would re-import on every launch
+forever.
+
+It measures against the newer of that file and `.godot/uid_cache.bin` now, which
+any import rewrites. The reason it had never shown up is that every commit that
+added art so far had happened to add a class as well.
+
+`check_cache_guard.sh` grew a fourth case for it, deliberately separate from the
+class-name one, because the fix could as easily have neutered the half that
+catches genuinely unimported art as repaired it. It now creates a real .png,
+checks the guard says stale, removes it, and checks the guard says current
+again.
 
 ## Working practices
 

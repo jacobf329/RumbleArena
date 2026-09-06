@@ -48,36 +48,59 @@ bone-naming problem, which it never was.
 `Skeleton3D`, whose root is therefore the skeleton. After that the prefix is not
 part of the question.
 
-### 2. The rest pose it was authored against (fixed by retargeting)
+### 2. The bone names it addresses
 
-This is the one that looks like it works. A bone track stores an **absolute
-local pose**, not a delta from rest, so dropping a clip on a rig whose rest pose
-differs imposes the first rig's pose on the second — and the result is off by
-exactly the difference between the two rests.
+A rebased track says `:Hips`. A rig without a bone called `Hips` has nothing to
+put there. Names are the entire contract, and both packs here use the same 24
+(Mixamo-style: `Hips`, `Spine/Spine01/Spine02`, `neck`, `Head`, `LeftUpLeg`, and
+so on), which is why they are interchangeable.
 
-These two packs share all 24 bone names and are up to **110° apart** at the hips
-and thighs. Borrowing a walk cycle across them, unretargeted, gave a Kurogane
-who fought in a permanent hunch, a head shorter than everyone else. Nothing
-errored.
+### What is *not* a problem, despite looking like one
 
-`build_animation_library.gd` retargets a borrowed clip: it takes the rotation
-away from the source rest and hangs it on the target rest, and rebases positions
-the same way. Kurogane's walk is the other pack's walk, retargeted.
+The two rigs' **rest poses** differ by up to 110° at the hips and thighs. That
+looks fatal and is not. A bone track stores an **absolute local pose**, which
+*replaces* rest rather than adding to it, so the pose carries across exactly and
+the rest difference never enters into it.
+
+Measured: play a clip on the rig it was authored on and on the other one, and
+the bones land within **14.0° of each other on average — the same 14.0 in both
+directions**. That residual is the two bodies being different shapes, one 1.69 m
+and lanky, the other 1.75 m and stocky. No rotation fix reaches it; it is not
+error, it is anatomy.
+
+There was a `retarget()` in this project that read the pose as a delta from the
+source rest and hung it on the target's. It is gone. It moved that 14.0 to 10.3
+carrying a walk one way and to 38.2 carrying a kick the other — the signature of
+a transform that is wrong and occasionally flattering, since a correct one would
+be symmetric. (It corrected for the bone's own rest and not its parent's, which
+is not a retarget.) Kurogane's walk is the other pack's walk, dropped in
+unchanged.
+
+`tools/compare_retarget.tscn` renders the proof: the same clip on both bodies,
+nothing done in between, in both directions.
+
+![One clip on two rigs](images/clip-portability.png)
 
 ### So, in practice
 
 | The new pack's rig | What you do |
 |---|---|
-| Same bone names, same rest pose | Nothing. Share clips freely. |
-| Same bone names, different rest pose | `borrow` it in the pack spec — the builder retargets. |
-| Different bone names | Rename on import, or retarget in Blender. |
-| Different skeleton structure | Retarget in Blender. There is no runtime fix. |
+| Same bone names | Nothing. Share clips freely — `borrow` in the pack spec. Rest poses and proportions may differ; the pose still transfers. |
+| Different bone names | Rename the bones on import, or retarget in a DCC tool against a bone map. |
+| Different skeleton structure | Retarget in a DCC tool. There is no runtime fix. |
 
-`tools/check_retarget.gd` answers both questions for the packs that exist. It
-plays every library against every model and reports any clip that resolves to
-nothing, then compares rest poses and says which rigs may share clips. It runs
-as part of `./run_tests.sh`, because no test suite can tell a fighter standing
-still from a fighter playing an animation that moves no bones.
+`tools/check_retarget.gd` answers this for a model you already have *or one you
+have just downloaded*:
+
+```bash
+godot --headless --path . --script res://tools/check_retarget.gd -- res://path/to/any.glb
+```
+
+It reports which bones are shared, plays one of each pack's real clips on both
+rigs, and prints how far apart they land. With no argument it checks the packs
+that ship here and runs as part of `./run_tests.sh` — because no test suite can
+tell a fighter standing still from a fighter playing an animation that moves no
+bones.
 
 ---
 
@@ -92,6 +115,9 @@ still from a fighter playing an animation that moves no bones.
 2. **Clips named what the movesets name**, or a moveset of its own. Clip names
    are the contract; the builder's `alias` map points the names the game asks
    for at whatever the pack called them.
+
+`borrow` in a pack spec pulls a clip in from another pack, unchanged — that is
+what Kurogane's walk is.
 
 The moveset also carries **when contact happens** in each clip, in seconds, and
 that number is specific to the clip it was measured on. Two packs animating the
