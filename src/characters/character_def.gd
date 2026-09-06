@@ -34,6 +34,9 @@ extends Resource
 
 @export_group("Presentation")
 @export var body_color: Color = Color.WHITE
+## The model and clips this ninja wears. Empty means the default body, which is
+## what every character wore before there was a second one to wear.
+@export var visual: CharacterVisual
 
 
 ## The permission check behind every interactable in the game.

@@ -17,9 +17,13 @@ func _ready() -> void:
 	stretch = true
 
 
-func set_character(_definition: CharacterDef, colour: Color) -> void:
+func set_character(definition: CharacterDef, colour: Color) -> void:
 	if not is_node_ready():
 		await ready
+	# The body as well as the colour: a ninja with its own model has to be that
+	# model here, or the one screen whose whole job is showing you what you are
+	# picking would be showing you somebody else.
+	_visual.set_visual(definition.visual if definition != null else null)
 	_visual.set_player_colour(colour)
 
 

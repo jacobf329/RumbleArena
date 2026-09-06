@@ -245,6 +245,7 @@ src/
   core/          match_manager, game_state, player_manager
   input/         input_source, keyboard_input, gamepad_input, input_frame
   characters/    character_def (Resource), fighter, states/, roster/*.tres
+                 character_visual (Resource), visuals/*.tres
   powers/        power (base), individual power scripts
   interactables/ interactable base + Liftable/Climbable/Hackable/Breakable/Hazard
   camera/        arena_camera
@@ -259,6 +260,15 @@ tests/           GUT-style headless test scenes
 name, and scene references for powers. Adding ninja #3 should be authoring a
 `.tres` plus one or two power scripts — not touching the fighter class. If
 adding a character requires editing `fighter.gd`, the abstraction has failed.
+
+That was true of the stat block and the powers from the start, and quietly
+untrue of the art: the model and its clips were constants in `FighterVisual`, so
+a second model would have meant a second code path. A `CharacterVisual` Resource
+now holds the body — model, animation library, scale, facing, and which colour in
+the texture the recolour shader rotates — and a ninja wears one by pointing at
+it. Clips are addressed by name (`roundhouse_kick`), never by rig, so a moveset
+stays shared between characters. See [`CHARACTER_MODELS.md`](CHARACTER_MODELS.md)
+for what a pack has to supply and why the animations are not tied to a mesh.
 
 **State machine per fighter.** Explicit states (Idle, Run, Jump, Fall, Attack,
 Hitstun, Knockdown, Carrying, Climbing, Blocking, Dodging, PowerCast). States own

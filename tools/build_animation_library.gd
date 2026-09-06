@@ -14,6 +14,17 @@ const OUTPUT := "res://assets/characters/ninja/ninja_animations.res"
 ## Clips that should loop rather than play once.
 const LOOPING := ["walk", "run", "run_fast", "run_alt"]
 
+## Clips left out of the library.
+##
+## rigify_clip came from a differently-named rig: its tracks address
+## "target_character/Skeleton3D:<bone>" against a Rigify bone set, and none of
+## those names exist on this model. Godot could not resolve a single one of its
+## 22 tracks, so it has never animated anything -- it only produced twenty
+## "couldn't resolve track" warnings every time a fighter spawned. The .glb
+## stays on disk because it is still a usable source once retargeted; it just
+## has no business in a library keyed to this skeleton.
+const SKIP := ["rigify_clip"]
+
 
 func _init() -> void:
 	var library := AnimationLibrary.new()
@@ -24,6 +35,9 @@ func _init() -> void:
 		if not file.ends_with(".glb"):
 			continue
 		var key := file.get_basename()
+		if key in SKIP:
+			print("  %-18s skipped (see SKIP)" % key)
+			continue
 		var scene: Node = load("%s/%s" % [CLIP_DIR, file]).instantiate()
 		var player := scene.find_child("AnimationPlayer", true, false) as AnimationPlayer
 		if player == null or player.get_animation_list().is_empty():

@@ -179,11 +179,16 @@ func _build_states() -> void:
 	_state.enter(FighterState.IDLE)
 
 
-## Every fighter shares one mesh and one texture; the slot colour is applied by
-## rotating the hue of the texture's saturated crimson only, so four players
-## read apart at a glance. Pillar P3.
+## Which body, and what colour it is. Characters share one mesh and one texture
+## per pack; the slot colour is applied by rotating the hue of that texture's
+## saturated source colour, so four players on the same body still read apart at
+## a glance. Pillar P3.
+##
+## Both come off the CharacterDef, so a ninja with its own model is a .tres and
+## not a branch here -- see docs/GAME_DESIGN.md section 9.
 func _apply_presentation() -> void:
 	_base_color = slot.color if slot != null else Color.WHITE
+	_visual.set_visual(character_def.visual)
 	_visual.set_player_colour(_base_color)
 
 	_nameplate.text = "%s  %s" % [

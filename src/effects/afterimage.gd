@@ -41,6 +41,10 @@ func setup(fighter: Node3D, colour: Color) -> void:
 	owner_fighter = fighter
 	if not is_node_ready():
 		await ready
+	# Wears the same body as its owner. A decoy in somebody else's model would
+	# not buy the half-second of hesitation it exists for.
+	var definition := fighter.get(&"character_def") as CharacterDef
+	_visual.set_visual(definition.visual if definition != null else null)
 	_visual.set_player_colour(colour)
 	global_rotation.y = fighter.global_rotation.y
 

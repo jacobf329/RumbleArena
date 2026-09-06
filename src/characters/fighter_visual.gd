@@ -1,20 +1,28 @@
-## The ninja model, its animation player, and its per-player recolour.
+## A character's body: its model, its animation player, and its per-player
+## recolour.
 ##
-## Every fighter shares one mesh and one texture; the shader rotates the hue of
-## the saturated crimson only, so four players read apart at a glance without
-## four sets of art -- and without green faces.
+## Which body is data now (CharacterVisual), not a constant here. The model is
+## built at runtime rather than instanced in the scene, because a fighter does
+## not know which ninja it is until setup() runs and three different scenes --
+## the fighter, the select preview, the decoy -- would otherwise each have to be
+## edited to add a model.
+##
+## The recolour is unchanged: one mesh and one texture per pack, and the shader
+## rotates the hue of the saturated source colour only, so four players read
+## apart at a glance without four sets of art -- and without green faces.
 class_name FighterVisual
 extends Node3D
 
-const ANIMATIONS := preload("res://assets/characters/ninja/ninja_animations.res")
+## Worn by anything that does not name a character: the arena's placeholder
+## fighter, a decoy whose owner has been freed, a preview before its first
+## set_character. Keeping a default here means no consumer has to handle null.
+const DEFAULT_VISUAL := preload("res://src/characters/visuals/ninja.tres")
 const HUE_SHADER := preload("res://assets/characters/ninja/ninja_hue.gdshader")
 const GHOST_SHADER := preload("res://assets/characters/ninja/ninja_ghost.gdshader")
 
-const LIBRARY := &"ninja"
-## Hue of the crimson in the source texture, measured from the atlas.
-const SOURCE_HUE := 0.0
-## The model stands 1.69m; the collision capsule is 1.8m.
-const MODEL_SCALE := 1.065
+## Library key. Internal -- clips are addressed as "clips/roundhouse_kick"
+## whatever pack supplied them, so a moveset never names a character's rig.
+const LIBRARY := &"clips"
 ## Seconds of cross-fade between locomotion clips.
 const BLEND := 0.14
 ## Metres (and radians) per second the flinch eases back by.
@@ -32,10 +40,12 @@ const WALK_SPEED := 4.2
 ## than no decoy at all.
 @export var ghost: bool = false
 
-@onready var _model: Node3D = $Model
-@onready var _player: AnimationPlayer = $Model/AnimationPlayer
+var visual: CharacterVisual = DEFAULT_VISUAL
 
+var _model: Node3D
+var _player: AnimationPlayer
 var _material: ShaderMaterial
+var _colour := Color.WHITE
 var _recoil_offset := Vector3.ZERO
 var _recoil_tilt := 0.0
 var _current := &""
@@ -44,17 +54,64 @@ var _locked := false
 
 
 func _ready() -> void:
-	# The model faces +Z (its toes point that way) while Godot's forward is -Z,
-	# so the scene flips it 180 degrees. Scale must not clobber that rotation.
-	_model.scale = Vector3.ONE * MODEL_SCALE
-	_player.add_animation_library(LIBRARY, ANIMATIONS)
+	_build_model()
+
+
+## Wears a different body. A no-op when it is already wearing that one, so this
+## is safe to call from set_character on every respawn.
+func set_visual(next: CharacterVisual) -> void:
+	var chosen := next if next != null else DEFAULT_VISUAL
+	if chosen == visual and _model != null:
+		return
+	visual = chosen
+	if is_node_ready():
+		_build_model()
+
+
+func _build_model() -> void:
+	if _model != null:
+		_model.queue_free()
+		# Removed as well as freed: queue_free lands at the end of the frame, and
+		# a find_child for the mesh or the player would otherwise still turn up
+		# the old body's.
+		remove_child(_model)
+		_model = null
+	_material = null
+	_player = null
+
+	if visual == null or visual.model == null:
+		return
+
+	_model = visual.model.instantiate()
+	_model.name = "Model"
+	add_child(_model)
+	# Models are authored facing +Z (their toes point that way) while Godot's
+	# forward is -Z. Rotation first, then scale -- setting scale preserves the
+	# basis rotation, but not the other way round.
+	_model.rotation = Vector3(0.0, PI if visual.faces_positive_z else 0.0, 0.0)
+	_model.scale = Vector3.ONE * visual.model_scale
+
+	_player = _model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _player != null and visual.animations != null:
+		_player.add_animation_library(LIBRARY, visual.animations)
 	_build_material()
+	# The colour was set before the body it belongs to existed whenever a seat
+	# changes ninja: the panel recolours once and then swaps the model.
+	set_player_colour(_colour)
+	_current = &""
+	_locked = false
 
 
-## Swaps the imported material for the hue shader, reusing its albedo texture.
+## Swaps the imported material for the recolour shader, reusing its albedo
+## texture. The mesh is found by the name the pack declares, falling back to the
+## first one in the model -- a single-mesh export should not have to name it.
 func _build_material() -> void:
-	var mesh_instance := _model.find_child("char1", true, false) as MeshInstance3D
+	var mesh_instance: MeshInstance3D = null
+	if visual.mesh_node != "":
+		mesh_instance = _model.find_child(visual.mesh_node, true, false) as MeshInstance3D
 	if mesh_instance == null:
+		mesh_instance = _first_mesh(_model)
+	if mesh_instance == null or mesh_instance.mesh == null:
 		return
 
 	var source := mesh_instance.mesh.surface_get_material(0) as BaseMaterial3D
@@ -65,7 +122,18 @@ func _build_material() -> void:
 	mesh_instance.material_override = _material
 
 
+func _first_mesh(node: Node) -> MeshInstance3D:
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			return child
+		var found := _first_mesh(child)
+		if found != null:
+			return found
+	return null
+
+
 func set_player_colour(colour: Color) -> void:
+	_colour = colour
 	if _material == null:
 		return
 	if ghost:
@@ -73,8 +141,9 @@ func set_player_colour(colour: Color) -> void:
 		# takes the colour directly.
 		_material.set_shader_parameter("ghost_color", colour)
 		return
-	# Rotate the crimson onto the slot's hue; wrapping keeps the shortest way round.
-	_material.set_shader_parameter("hue_shift", wrapf(colour.h - SOURCE_HUE, -0.5, 0.5))
+	# Rotate the source colour onto the slot's hue; wrapping keeps the shortest
+	# way round.
+	_material.set_shader_parameter("hue_shift", wrapf(colour.h - visual.source_hue, -0.5, 0.5))
 
 
 ## How solid the afterimage looks. No-op on a real fighter.
@@ -91,7 +160,7 @@ func set_hit_flash(amount: float) -> void:
 ## Picks a locomotion clip from how fast the fighter is actually moving, and
 ## scales playback to the speed so the feet do not skate.
 func play_locomotion(planar_speed: float, airborne: bool) -> void:
-	if _locked:
+	if _locked or _player == null:
 		return
 
 	var clip := &"walk"
@@ -117,6 +186,8 @@ func play_locomotion(planar_speed: float, airborne: bool) -> void:
 ## and the animation rarely divide the move the same way.
 func play_attack(clip: StringName, from: float, impact: float, to: float,
 		startup_seconds: float, remainder_seconds: float) -> void:
+	if _player == null:
+		return
 	var animation := _player.get_animation("%s/%s" % [LIBRARY, clip])
 	if animation == null:
 		return
@@ -151,6 +222,8 @@ func _process(delta: float) -> void:
 		return
 	_recoil_offset = _recoil_offset.move_toward(Vector3.ZERO, RECOIL_RECOVERY * delta)
 	_recoil_tilt = move_toward(_recoil_tilt, 0.0, RECOIL_RECOVERY * delta)
+	if _model == null:
+		return
 	_model.position = _recoil_offset
 	_model.rotation.x = -_recoil_tilt
 
@@ -159,17 +232,21 @@ func _process(delta: float) -> void:
 ## them -- a stopped animation reads as "stunned" better than a walk cycle does.
 func hold() -> void:
 	_locked = true
-	_player.speed_scale = 0.0
+	if _player != null:
+		_player.speed_scale = 0.0
 
 
 func release_attack() -> void:
 	_locked = false
 	_current = &""
-	_player.speed_scale = 1.0
+	if _player != null:
+		_player.speed_scale = 1.0
 
 
 ## One-shot clips for reactions, which do not need contact alignment.
 func play_reaction(clip: StringName, rate := 1.0, seek_to := 0.0) -> void:
+	if _player == null:
+		return
 	_locked = true
 	_current = clip
 	_player.play("%s/%s" % [LIBRARY, clip], 0.08)
@@ -178,6 +255,8 @@ func play_reaction(clip: StringName, rate := 1.0, seek_to := 0.0) -> void:
 
 
 func _play(clip: StringName, rate: float) -> void:
+	if _player == null:
+		return
 	if _current != clip:
 		_current = clip
 		_player.play("%s/%s" % [LIBRARY, clip], BLEND)

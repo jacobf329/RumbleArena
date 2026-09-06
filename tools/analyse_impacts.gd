@@ -24,7 +24,7 @@ func _init() -> void:
 	get_root().add_child(model)
 	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
 	var player := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	player.add_animation_library(&"ninja", load(LIBRARY))
+	player.add_animation_library(&"clips", load(LIBRARY))
 	# Headless there is no process step to drive the mixer, so it is advanced by
 	# hand and the skeleton is forced to recompute before each sample.
 	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
@@ -36,7 +36,7 @@ func _init() -> void:
 
 	for clip: String in ["punch_combo", "roundhouse_kick", "double_kick",
 			"shoulder_throw", "spin_jump"]:
-		var animation := player.get_animation("ninja/" + clip)
+		var animation := player.get_animation("clips/" + clip)
 		print("\n== %s  (%.2fs)" % [clip, animation.length])
 
 		# reach[striker] = per-frame distance from the hips, in bone space.
@@ -44,7 +44,7 @@ func _init() -> void:
 		for bone_name: String in STRIKERS:
 			reach[bone_name] = PackedFloat32Array()
 
-		player.play("ninja/" + clip)
+		player.play("clips/" + clip)
 		var time := 0.0
 		while time <= animation.length:
 			player.seek(time, true)

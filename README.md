@@ -56,6 +56,8 @@ standing where she was. Hitting it costs you.
 - **[`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md)** — pillars, stat system,
   roster, combat, arena interaction, camera, input, architecture, risks.
 - **[`docs/ROADMAP.md`](docs/ROADMAP.md)** — milestones and working practices.
+- **[`docs/CHARACTER_MODELS.md`](docs/CHARACTER_MODELS.md)** — adding a model and
+  animation pack, and why the clips are not tied to the mesh they came from.
 
 ## The short version
 
@@ -371,7 +373,7 @@ headlessly with no hardware.
 | `tools/` | Setup, updater and dev scripts (Godot download, shortcuts, capture) |
 | `src/core/` | Match flow, game state, player management |
 | `src/input/` | `InputSource` / `InputFrame` abstraction (keyboard + gamepad) |
-| `src/characters/` | `CharacterDef` resources, fighter, state machine, roster |
+| `src/characters/` | `CharacterDef` and `CharacterVisual` resources, fighter, state machine, roster |
 | `assets/characters/` | Ninja model, stripped animation clips, hue shader |
 | `src/combat/` | Frame data, movesets, hit resolution, damage formulas |
 | `src/powers/` | Power base class and per-character powers |

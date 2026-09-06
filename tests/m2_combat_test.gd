@@ -1011,7 +1011,7 @@ func _pinned_until_moved(fighter: Fighter, from: Vector3, limit: int) -> void:
 ## way the two can disagree is if a move names a clip that is missing or puts its
 ## moment of contact outside the slice it actually plays.
 func _test_animation_data_is_sane(fighter: Fighter) -> void:
-	var library: AnimationLibrary = FighterVisual.ANIMATIONS
+	var library: AnimationLibrary = FighterVisual.DEFAULT_VISUAL.animations
 	var moves: Array[AttackDef] = [
 		fighter.move_set.heavy, fighter.move_set.launcher,
 		fighter.move_set.air_light, fighter.move_set.air_heavy,
