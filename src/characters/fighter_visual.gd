@@ -91,15 +91,36 @@ func _build_model() -> void:
 	_model.rotation = Vector3(0.0, PI if visual.faces_positive_z else 0.0, 0.0)
 	_model.scale = Vector3.ONE * visual.model_scale
 
-	_player = _model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	if _player != null and visual.animations != null:
-		_player.add_animation_library(LIBRARY, visual.animations)
+	_build_player()
 	_build_material()
 	# The colour was set before the body it belongs to existed whenever a seat
 	# changes ninja: the panel recolours once and then swaps the model.
 	set_player_colour(_colour)
 	_current = &""
 	_locked = false
+
+
+## Plays the pack's clips from a player parented to the skeleton itself.
+##
+## Not the AnimationPlayer the .glb imported with: that one's root is the scene
+## root, so its tracks carry whatever the export called it ("Armature/",
+## "target_character/"). The library is built with those prefixes stripped -- a
+## bone track is just ":Hips" -- so it has to be played from something whose
+## root *is* the skeleton. Parenting the player to the Skeleton3D does that with
+## no configuration, since an AnimationPlayer's root defaults to its parent.
+##
+## The payoff is that a library is no longer tied to the export it came from:
+## Kurogane's pack has no walk cycle and borrows the other pack's, and neither
+## model knows.
+func _build_player() -> void:
+	var skeleton := _model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skeleton == null:
+		return
+	_player = AnimationPlayer.new()
+	_player.name = "Clips"
+	skeleton.add_child(_player)
+	if visual.animations != null:
+		_player.add_animation_library(LIBRARY, visual.animations)
 
 
 ## Swaps the imported material for the recolour shader, reusing its albedo
@@ -119,7 +140,31 @@ func _build_material() -> void:
 	_material.shader = GHOST_SHADER if ghost else HUE_SHADER
 	if source != null and source.albedo_texture != null:
 		_material.set_shader_parameter("albedo_texture", source.albedo_texture)
+	# A decoy is a flat silhouette, so surface detail would be wasted on it.
+	if not ghost and source != null:
+		_take_surface_maps(source)
 	mesh_instance.material_override = _material
+
+
+## Carries a pack's normal and occlusion/roughness/metallic maps over to the
+## recolour shader when it has them.
+##
+## Without this the shader sets one flat roughness for the whole body, which is
+## all the first pack could offer -- it ships an albedo map and nothing else. The
+## armoured pack ships all three at 2K, and throwing away two of them to reuse a
+## constant would make a plate and a cloth wrap reflect identically.
+func _take_surface_maps(source: BaseMaterial3D) -> void:
+	if source.normal_texture != null:
+		_material.set_shader_parameter("normal_texture", source.normal_texture)
+		_material.set_shader_parameter("use_normal_map", true)
+		_material.set_shader_parameter("normal_strength", source.normal_scale)
+	# glTF hands Godot one packed texture and points both slots at it.
+	var orm := source.roughness_texture
+	if orm == null:
+		orm = source.metallic_texture
+	if orm != null:
+		_material.set_shader_parameter("orm_texture", orm)
+		_material.set_shader_parameter("use_orm_map", true)
 
 
 func _first_mesh(node: Node) -> MeshInstance3D:

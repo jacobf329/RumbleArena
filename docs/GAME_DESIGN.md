@@ -107,6 +107,11 @@ Eight ninjas at full scope. Two are fully built in the vertical slice.
   mass-class 4 objects (normally 3) and throw *players* as projectiles.
 - **Plays like:** slow, unstoppable, wants the arena cluttered with heavy things.
   Cannot climb. Cannot hack. Reaches high ground by throwing something at it.
+- **Wears his own body.** The armoured pack — plate, 2K normal and roughness
+  maps, fifteen clips of its own — rather than the shared ninja model, and his
+  own moveset naming them. Same frame data, different animation: a bruiser who
+  reads as heavier than everyone else at a glance is the cheapest version of P1
+  there is. See [`CHARACTER_MODELS.md`](CHARACTER_MODELS.md).
 
 **Null** *(teleportation + hacking)*
 > No face, no name in any registry. Deletes herself from rooms.

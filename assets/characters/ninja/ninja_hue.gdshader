@@ -14,8 +14,18 @@ uniform float hue_shift : hint_range(-1.0, 1.0) = 0.0;
 uniform float saturation_threshold : hint_range(0.0, 1.0) = 0.45;
 uniform float saturation_feather : hint_range(0.005, 0.5) = 0.13;
 uniform float saturation_gain : hint_range(0.5, 2.0) = 1.0;
+// Flat values for a pack that ships an albedo map and nothing else. A pack with
+// real surface maps overrides them per-pixel below; the booleans are set from
+// code off the imported material, because a sampler with nothing bound reads as
+// white and would flatten the armour to plastic rather than doing nothing.
 uniform float roughness_value : hint_range(0.0, 1.0) = 0.62;
 uniform float metallic_value : hint_range(0.0, 1.0) = 0.0;
+uniform sampler2D normal_texture : hint_normal, filter_linear_mipmap;
+// glTF packs occlusion, roughness and metallic into one texture's R, G and B.
+uniform sampler2D orm_texture : hint_default_white, filter_linear_mipmap;
+uniform bool use_normal_map = false;
+uniform bool use_orm_map = false;
+uniform float normal_strength : hint_range(0.0, 2.0) = 1.0;
 // Flashes the whole model on being hit. Cheaper and more legible than swapping
 // materials, and it survives the hue shift untouched.
 uniform float hit_flash : hint_range(0.0, 1.0) = 0.0;
@@ -49,7 +59,23 @@ void fragment() {
 
 	vec3 colour = hsv_to_rgb(hsv);
 	ALBEDO = mix(colour, vec3(1.0), hit_flash);
-	ROUGHNESS = roughness_value;
-	METALLIC = metallic_value;
+
+	if (use_orm_map) {
+		vec3 orm = texture(orm_texture, UV).rgb;
+		// Roughness in green, metallic in blue, per glTF. Red is occlusion only
+		// when the pack ships one, and neither of these does -- reading it here
+		// would take an undefined channel for shadow.
+		ROUGHNESS = orm.g;
+		METALLIC = orm.b;
+	} else {
+		ROUGHNESS = roughness_value;
+		METALLIC = metallic_value;
+	}
+
+	if (use_normal_map) {
+		NORMAL_MAP = texture(normal_texture, UV).rgb;
+		NORMAL_MAP_DEPTH = normal_strength;
+	}
+
 	EMISSION = vec3(hit_flash * 0.6);
 }

@@ -754,6 +754,58 @@ briefing layouts are captured in `docs/images/m7-*.png` by
 `tools/capture_story.tscn`, because a screen full of prose is the kind of thing
 that only looks wrong when you look at it.
 
+## A second body, and what "the animations are portable" actually means
+
+Kurogane wears his own model now: an armoured pack with 2K normal and roughness
+maps and fifteen clips of its own, against the shared ninja everyone else wears.
+Wiring it turned up two silent failures and corrected a claim I had already made
+in writing.
+
+**Track paths are node paths, and a prefix mismatch resolves nothing.** Godot
+resolves an animation track by its whole path, and each export names its own rig
+root -- `Armature/Skeleton3D:Hips` for one pack, `target_character/
+Skeleton3D:Hips` for the next. Identical bone names, different prefix, zero
+tracks resolved, no error. A clip in the first pack had been doing precisely
+this for weeks; I had read its twenty `couldn't resolve track` warnings as a
+bone-naming problem and written that down. It was never the bone names. The
+library builder now rewrites every bone track to `:Bone` and `FighterVisual`
+plays clips from an `AnimationPlayer` parented to the `Skeleton3D`, so the
+prefix stops being part of the question.
+
+**Same bone names is necessary and not sufficient.** A bone track stores an
+absolute local pose, not a delta from rest, so a clip dropped onto a rig with a
+different rest pose imposes the first rig's pose on the second. These two rigs
+share all 24 bone names and sit up to 110 degrees apart at the hips and thighs.
+The armoured pack has no walk cycle, so I borrowed the other pack's -- and got a
+Kurogane who fought in a permanent hunch, a head shorter than everyone else,
+with nothing logged. The builder retargets a borrowed clip now: rotation away
+from the source rest, onto the target rest. His walk is the other pack's walk,
+retargeted.
+
+Neither failure is visible to a test that asserts a clip loaded, so
+`tools/check_retarget.gd` asserts what actually matters -- that the skeleton
+*moved* -- for every library against every model, then compares rest poses and
+says which rigs may share clips. It runs in `./run_tests.sh`.
+
+**Two smaller things.** A moveset carries the moment of contact in each clip, in
+seconds, which is specific to the clip it was measured on: Kurogane's ultimate
+pointed at 2.6s of a throw the new pack finishes in 2.5. So he has his own
+moveset -- identical frame data to the standard one, different clips and slices,
+found with `tools/analyse_impacts.gd`. And the m2 check that every move names a
+clip that exists was asking the *default* library about *one* fighter's moveset;
+it now asks every ninja's own library about every one of that ninja's moves and
+powers, which took it from 143 checks to 275 and is the check that would have
+caught the ultimate.
+
+Before any of that could happen the body had to stop being a constant. The model
+and its library were `const`s in `FighterVisual` and the model was instanced as
+a child in three separate scenes, so a second one meant a second code path --
+the failure `GAME_DESIGN.md` section 9 names. A `CharacterVisual` resource holds
+it now, `CharacterDef` points at one, and `FighterVisual` builds the model at
+runtime. Which incidentally surfaced that the select screen had been handed the
+character definition and ignoring it: with one model, nobody could see that the
+preview was showing the default rather than your pick.
+
 ## Working practices
 
 - **Headless validation every commit.** `./run_tests.sh` imports the project

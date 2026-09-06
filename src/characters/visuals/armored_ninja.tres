@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CharacterVisual" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_visual.gd" id="1_visual"]
+[ext_resource type="PackedScene" path="res://assets/characters/armored_ninja/armored_ninja.glb" id="2_model"]
+[ext_resource type="AnimationLibrary" path="res://assets/characters/armored_ninja/armored_ninja_animations.res" id="3_clips"]
+
+[resource]
+script = ExtResource("1_visual")
+display_name = "Armored Ninja"
+model = ExtResource("2_model")
+animations = ExtResource("3_clips")
+model_scale = 1.0286
+faces_positive_z = true
+mesh_node = "char1"
+source_hue = 0.0

@@ -1,0 +1,235 @@
+; Kurogane's moveset: the standard frame data, on the armored pack's clips.
+;
+; Every gameplay number here is copied from standard.tres unchanged -- damage,
+; startup, knockback, hitboxes, cancels. The only differences are which clip
+; each move plays and where in it contact lands, because the two packs animate
+; the same moves at different times and a slice tuned to one lands mid-wind-up
+; on the other.
+;
+; Contact times came from tools/analyse_impacts.gd, which samples every frame
+; and reports where each hand reaches furthest and each foot goes highest -- a
+; punch connects at full extension, a kick at the top of its arc. They are a
+; first pass: nudge them here rather than in code if a move reads late.
+
+[gd_resource type="Resource" script_class="MoveSet" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://src/combat/move_set.gd" id="1_moveset"]
+[ext_resource type="Script" path="res://src/combat/attack_def.gd" id="2_attack"]
+
+[sub_resource type="Resource" id="Light1"]
+script = ExtResource("2_attack")
+display_name = "Jab"
+ticks_startup = 5
+ticks_active = 3
+ticks_recovery = 9
+damage = 4.0
+knockback = 4.0
+launch_angle = 12.0
+ticks_hitstun = 20
+ticks_hitstop = 4
+power_gain = 7.0
+step_forward = 1.5
+halts_fall = false
+hitbox_size = Vector3(1.1, 1.1, 1.5)
+hitbox_offset = Vector3(0, 1.0, -1.0)
+animation = &"punch_jab"
+animation_start = 0.65
+animation_impact = 1.0
+animation_end = 1.35
+rhythm_window_ticks = 7
+cancel_window_start = 2
+cancel_requires_hit = false
+
+[sub_resource type="Resource" id="Light2"]
+script = ExtResource("2_attack")
+display_name = "Cross"
+ticks_startup = 5
+ticks_active = 3
+ticks_recovery = 10
+damage = 5.0
+knockback = 4.5
+launch_angle = 14.0
+ticks_hitstun = 23
+ticks_hitstop = 4
+power_gain = 8.0
+step_forward = 1.8
+halts_fall = false
+hitbox_size = Vector3(1.1, 1.1, 1.5)
+hitbox_offset = Vector3(0, 1.0, -1.0)
+animation = &"punch_cross"
+animation_start = 0.2
+animation_impact = 0.53
+animation_end = 0.9
+rhythm_window_ticks = 7
+cancel_window_start = 2
+cancel_requires_hit = false
+
+[sub_resource type="Resource" id="Light3"]
+script = ExtResource("2_attack")
+display_name = "Roundhouse"
+ticks_startup = 7
+ticks_active = 4
+ticks_recovery = 16
+damage = 8.0
+knockback = 9.5
+launch_angle = 26.0
+ticks_hitstun = 32
+ticks_hitstop = 7
+power_gain = 10.0
+step_forward = 2.4
+halts_fall = false
+hitbox_size = Vector3(1.4, 1.3, 1.8)
+hitbox_offset = Vector3(0, 1.0, -1.1)
+launches_fireball = true
+fireball_power_cost = 20.0
+fireball_damage = 11.0
+fireball_speed = 13.0
+fireball_knockback = 8.0
+animation = &"roundhouse"
+animation_start = 0.4
+animation_impact = 0.77
+animation_end = 1.3
+rhythm_window_ticks = 8
+cancel_window_start = 4
+cancel_requires_hit = true
+
+[sub_resource type="Resource" id="Heavy"]
+script = ExtResource("2_attack")
+display_name = "Hammer"
+ticks_startup = 13
+ticks_active = 5
+ticks_recovery = 22
+damage = 14.0
+knockback = 13.5
+launch_angle = 20.0
+ticks_hitstun = 38
+ticks_hitstop = 9
+power_gain = 12.0
+step_forward = 3.0
+halts_fall = false
+hitbox_size = Vector3(1.6, 1.4, 2.0)
+hitbox_offset = Vector3(0, 1.0, -1.2)
+animation = &"kick_side"
+animation_start = 0.65
+animation_impact = 1.07
+animation_end = 1.65
+rhythm_window_ticks = 8
+cancel_window_start = 6
+cancel_requires_hit = true
+
+[sub_resource type="Resource" id="Launch"]
+script = ExtResource("2_attack")
+display_name = "Uppercut"
+ticks_startup = 11
+ticks_active = 4
+ticks_recovery = 24
+damage = 9.0
+knockback = 12.0
+launch_angle = 78.0
+ticks_hitstun = 44
+ticks_hitstop = 8
+power_gain = 12.0
+step_forward = 1.0
+halts_fall = false
+hitbox_size = Vector3(1.3, 1.8, 1.4)
+hitbox_offset = Vector3(0, 1.2, -0.9)
+animation = &"crane_kick"
+animation_start = 0.45
+animation_impact = 0.95
+animation_end = 1.55
+rhythm_window_ticks = 8
+cancel_window_start = 6
+cancel_requires_hit = true
+
+[sub_resource type="Resource" id="AirLight"]
+script = ExtResource("2_attack")
+display_name = "Jump Kick"
+ticks_startup = 6
+ticks_active = 5
+ticks_recovery = 12
+damage = 7.0
+knockback = 7.0
+launch_angle = 14.0
+ticks_hitstun = 24
+ticks_hitstop = 5
+power_gain = 7.0
+step_forward = 5.2
+halts_fall = true
+hitbox_size = Vector3(1.3, 1.2, 2.0)
+hitbox_offset = Vector3(0, 0.85, -1.15)
+animation = &"kick_front"
+animation_start = 0.35
+animation_impact = 0.73
+animation_end = 1.2
+rhythm_window_ticks = 7
+cancel_window_start = 3
+cancel_requires_hit = false
+
+[sub_resource type="Resource" id="AirHeavy"]
+script = ExtResource("2_attack")
+display_name = "Slam"
+ticks_startup = 10
+ticks_active = 4
+ticks_recovery = 26
+damage = 11.0
+knockback = 12.0
+launch_angle = -58.0
+ticks_hitstun = 34
+ticks_hitstop = 9
+power_gain = 12.0
+step_forward = 0.0
+halts_fall = false
+hitbox_size = Vector3(1.5, 1.8, 1.5)
+hitbox_offset = Vector3(0, 0.6, -0.5)
+animation = &"front_flip"
+animation_start = 0.85
+animation_impact = 1.25
+animation_end = 1.85
+rhythm_window_ticks = 8
+cancel_window_start = 6
+cancel_requires_hit = true
+dive_speed = 26.0
+slams_on_landing = true
+slam_radius = 3.2
+slam_damage = 9.0
+slam_knockback = 12.0
+slam_launch_angle = 48.0
+slam_hitstun = 32
+
+[sub_resource type="Resource" id="Grab"]
+script = ExtResource("2_attack")
+display_name = "Shoulder Throw"
+ticks_startup = 8
+ticks_active = 4
+ticks_recovery = 30
+damage = 0.0
+knockback = 0.0
+launch_angle = 0.0
+ticks_hitstun = 1
+ticks_hitstop = 4
+power_gain = 11.0
+step_forward = 1.2
+halts_fall = false
+hitbox_size = Vector3(1.2, 1.4, 1.5)
+hitbox_offset = Vector3(0, 1.0, -0.9)
+is_grab = true
+grab_release_tick = 26
+grab_throw_speed = 16.0
+grab_damage = 13.0
+grab_launch_angle = 34.0
+animation = &"throw"
+animation_start = 0.55
+animation_impact = 1.0
+animation_end = 1.7
+rhythm_window_ticks = 8
+cancel_window_start = 40
+cancel_requires_hit = true
+
+[resource]
+script = ExtResource("1_moveset")
+light_chain = Array[Resource]([SubResource("Light1"), SubResource("Light2"), SubResource("Light3")])
+heavy = SubResource("Heavy")
+launcher = SubResource("Launch")
+air_light = SubResource("AirLight")
+air_heavy = SubResource("AirHeavy")
+grab = SubResource("Grab")

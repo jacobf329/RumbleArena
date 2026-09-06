@@ -1,5 +1,17 @@
 # Armored ninja — Godot asset pack
 
+> **How this pack is wired into RumbleArena.** The delivery below describes a
+> standalone Godot project; none of that layout survived the move. The model and
+> its fifteen clips are `armored_ninja.glb`; the clips are rebuilt into
+> `armored_ninja_animations.res` by `tools/build_animation_library.gd`, with
+> their track paths made skeleton-relative so they resolve on this project's
+> rigs. `ninja_actor.gd`, `ninja_actor.tscn`, `preview.tscn` and the separately
+> delivered texture files were dropped: `FighterVisual` drives the model, and
+> the textures are embedded in the .glb. Kurogane wears it, through
+> `src/characters/visuals/armored_ninja.tres`. `headband_tails.glb` and
+> `headband_wind.gdshader` are kept but not yet attached to anything.
+> See `docs/CHARACTER_MODELS.md`.
+
 Open `project.godot` in Godot 4 and press F6 on `preview.tscn` (or F5). Tested with Godot 4.7.2. Select a move, replay it, change playback speed, orbit with right-drag, and zoom with the wheel.
 
 ## Use in your game

@@ -374,7 +374,7 @@ headlessly with no hardware.
 | `src/core/` | Match flow, game state, player management |
 | `src/input/` | `InputSource` / `InputFrame` abstraction (keyboard + gamepad) |
 | `src/characters/` | `CharacterDef` and `CharacterVisual` resources, fighter, state machine, roster |
-| `assets/characters/` | Ninja model, stripped animation clips, hue shader |
+| `assets/characters/` | Model and animation packs, recolour shaders |
 | `src/combat/` | Frame data, movesets, hit resolution, damage formulas |
 | `src/powers/` | Power base class and per-character powers |
 | `src/interactables/` | Permission rule, liftables, breakables, hackable turrets |

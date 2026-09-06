@@ -96,7 +96,7 @@ func _run() -> void:
 	await _test_air_moves_need_air(kurogane, yamabuki)
 
 	_section("Rhythm")
-	_test_animation_data_is_sane(kurogane)
+	_test_animation_data_is_sane()
 	await _test_mashing_earns_nothing(kurogane, yamabuki)
 	await _test_timing_the_cancel_pays(kurogane, yamabuki)
 
@@ -1010,28 +1010,50 @@ func _pinned_until_moved(fighter: Fighter, from: Vector3, limit: int) -> void:
 ## Frame data owns gameplay timing and the clip is scaled to fit it, so the only
 ## way the two can disagree is if a move names a clip that is missing or puts its
 ## moment of contact outside the slice it actually plays.
-func _test_animation_data_is_sane(fighter: Fighter) -> void:
-	var library: AnimationLibrary = FighterVisual.DEFAULT_VISUAL.animations
-	var moves: Array[AttackDef] = [
-		fighter.move_set.heavy, fighter.move_set.launcher,
-		fighter.move_set.air_light, fighter.move_set.air_heavy,
-	]
-	moves.append_array(fighter.move_set.light_chain)
+##
+## Asked of every ninja against the library that ninja actually wears, not once
+## against the default one. A character with its own model brings its own clips
+## and its own moveset naming them, and checking that pairing anywhere else is
+## checking a pairing nobody plays -- which is how a slice tuned for a 4.3s
+## throw ended up on a pack that finishes the throw in 2.5.
+func _test_animation_data_is_sane() -> void:
+	for index in CharacterRoster.size():
+		var definition := CharacterRoster.at(index)
+		var visual: CharacterVisual = definition.visual \
+			if definition.visual != null else FighterVisual.DEFAULT_VISUAL
+		var library := visual.animations
+		var move_set: MoveSet = definition.move_set \
+			if definition.move_set != null else Fighter.DEFAULT_MOVE_SET
 
-	for attack in moves:
-		_check(attack.has_animation(), "%s names an animation" % attack.display_name)
-		if not attack.has_animation():
-			continue
-		_check(library.has_animation(attack.animation),
-			"%s's clip '%s' exists in the library" % [attack.display_name, attack.animation])
-		_check(attack.animation_start <= attack.animation_impact
-				and attack.animation_impact <= attack.animation_end,
-			"%s's contact sits inside its slice (%.2f in %.2f..%.2f)" % [
-				attack.display_name, attack.animation_impact,
-				attack.animation_start, attack.animation_end])
-		if library.has_animation(attack.animation):
-			_check(attack.animation_end <= library.get_animation(attack.animation).length + 0.01,
-				"%s's slice fits inside '%s'" % [attack.display_name, attack.animation])
+		var moves: Array[AttackDef] = [
+			move_set.heavy, move_set.launcher, move_set.air_light,
+			move_set.air_heavy, move_set.grab,
+		]
+		moves.append_array(move_set.light_chain)
+		# A character's powers name clips out of the same library.
+		for power in [definition.signature, definition.ultimate]:
+			if power != null:
+				moves.append(power)
+
+		for attack in moves:
+			if attack == null:
+				continue
+			var who := "%s's %s" % [definition.display_name, attack.display_name]
+			_check(attack.has_animation(), "%s names an animation" % who)
+			if not attack.has_animation():
+				continue
+			_check(library.has_animation(attack.animation),
+				"%s plays '%s', which %s has" % [who, attack.animation, visual.display_name])
+			_check(attack.animation_start <= attack.animation_impact
+					and attack.animation_impact <= attack.animation_end,
+				"%s's contact sits inside its slice (%.2f in %.2f..%.2f)" % [
+					who, attack.animation_impact,
+					attack.animation_start, attack.animation_end])
+			if library.has_animation(attack.animation):
+				_check(attack.animation_end <= library.get_animation(attack.animation).length + 0.01,
+					"%s's slice fits inside '%s' (%.2f of %.2fs)" % [
+						who, attack.animation,
+						attack.animation_end, library.get_animation(attack.animation).length])
 
 
 ## Mashing still combos -- it just earns nothing. That is the whole shape of the

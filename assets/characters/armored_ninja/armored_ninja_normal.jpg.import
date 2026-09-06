@@ -2,27 +2,25 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bikihjr2e7yip"
-path="res://.godot/imported/headband_tails_base_color.jpg-8cde3b3fbdae3ffe8e80f52cb21b5e0f.ctex"
+uid="uid://bbu3tklkuee3e"
+path="res://.godot/imported/armored_ninja_normal.jpg-0801367568a90f3578ace5885c902da0.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "2bc7e6130cd5f630448de4b2a29be888"
+"md5": "e4f3f3c60b586f7427d032d5a5fb3a70"
 }
 
 [deps]
 
-source_file="res://assets/headband_tails_base_color.jpg"
-dest_files=["res://.godot/imported/headband_tails_base_color.jpg-8cde3b3fbdae3ffe8e80f52cb21b5e0f.ctex"]
+source_file="res://assets/characters/armored_ninja/armored_ninja_normal.jpg"
+dest_files=["res://.godot/imported/armored_ninja_normal.jpg-0801367568a90f3578ace5885c902da0.ctex"]
 
 [params]
 
 compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
-compress/uastc_level=0
-compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
@@ -30,10 +28,6 @@ mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
-process/channel_remap/red=0
-process/channel_remap/green=1
-process/channel_remap/blue=2
-process/channel_remap/alpha=3
 process/fix_alpha_border=true
 process/premult_alpha=false
 process/normal_map_invert_y=false

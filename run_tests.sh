@@ -38,6 +38,17 @@ if ! GODOT="$GODOT" "$PROJECT/tools/check_cache_guard.sh"; then
 	exit 1
 fi
 
+# Clips resolve by node path, so a pack exported with a different rig root
+# animates nothing and says nothing about it. Checked directly, because no suite
+# can see the difference between a fighter standing still and a fighter playing
+# an animation that moves no bones.
+echo
+echo "==> Checking animation retargeting"
+if ! "$GODOT" --headless --path "$PROJECT" --script res://tools/check_retarget.gd; then
+	echo "FAILED: a pack's clips do not animate a model"
+	exit 1
+fi
+
 status=0
 for suite in m1_smoke_test m2_combat_test m3_interaction_test m4_match_test m5_bot_test m6_frontend_test m7_story_test; do
 	echo

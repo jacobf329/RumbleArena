@@ -9,8 +9,17 @@
 ##   godot --headless --path . --script res://tools/analyse_impacts.gd
 extends SceneTree
 
-const MODEL := "res://assets/characters/ninja/ninja_model.glb"
-const LIBRARY := "res://assets/characters/ninja/ninja_animations.res"
+##   godot --headless --path . --script res://tools/analyse_impacts.gd -- <pack>
+const PACKS := {
+	"ninja": {
+		"model": "res://assets/characters/ninja/ninja_model.glb",
+		"library": "res://assets/characters/ninja/ninja_animations.res",
+	},
+	"armored_ninja": {
+		"model": "res://assets/characters/armored_ninja/armored_ninja.glb",
+		"library": "res://assets/characters/armored_ninja/armored_ninja_animations.res",
+	},
+}
 const STEP := 1.0 / 60.0
 
 const STRIKERS := {
@@ -20,11 +29,19 @@ const STRIKERS := {
 
 
 func _init() -> void:
-	var model: Node3D = load(MODEL).instantiate()
+	var args := OS.get_cmdline_user_args()
+	var pack: String = args[0] if args.size() > 0 else "ninja"
+	var spec: Dictionary = PACKS[pack]
+	print("== %s" % pack)
+
+	var model: Node3D = load(spec["model"]).instantiate()
 	get_root().add_child(model)
 	var skeleton := model.find_child("Skeleton3D", true, false) as Skeleton3D
-	var player := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-	player.add_animation_library(&"clips", load(LIBRARY))
+	# Parented to the skeleton, matching FighterVisual: the libraries hold
+	# skeleton-relative track paths and resolve against nothing else.
+	var player := AnimationPlayer.new()
+	skeleton.add_child(player)
+	player.add_animation_library(&"clips", load(spec["library"]))
 	# Headless there is no process step to drive the mixer, so it is advanced by
 	# hand and the skeleton is forced to recompute before each sample.
 	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
@@ -34,15 +51,20 @@ func _init() -> void:
 	for bone_name: String in STRIKERS:
 		bones[bone_name] = skeleton.find_bone(bone_name)
 
-	for clip: String in ["punch_combo", "roundhouse_kick", "double_kick",
-			"shoulder_throw", "spin_jump"]:
+	var clips: Array = args.slice(1)
+	if clips.is_empty():
+		clips = ["punch_combo", "roundhouse_kick", "double_kick",
+			"shoulder_throw", "spin_jump"]
+	for clip: String in clips:
 		var animation := player.get_animation("clips/" + clip)
 		print("\n== %s  (%.2fs)" % [clip, animation.length])
 
 		# reach[striker] = per-frame distance from the hips, in bone space.
 		var reach := {}
+		var lift := {}
 		for bone_name: String in STRIKERS:
 			reach[bone_name] = PackedFloat32Array()
+			lift[bone_name] = PackedFloat32Array()
 
 		player.play("clips/" + clip)
 		var time := 0.0
@@ -54,12 +76,33 @@ func _init() -> void:
 			for bone_name: String in STRIKERS:
 				var pose := skeleton.get_bone_global_pose(bones[bone_name])
 				reach[bone_name].append(hips_pose.origin.distance_to(pose.origin))
+				lift[bone_name].append(pose.origin.y)
 			time += STEP
 
+		# Peaks first, then the plain argmax. The peak finder is the better
+		# reading when a clip has two distinct strikes in it; on a clip that
+		# holds one, its threshold reports the rest pose alongside the strike and
+		# the furthest-from-rest line below is the one to trust.
 		for bone_name: String in STRIKERS:
 			for peak in _find_peaks(reach[bone_name]):
-				print("   %-7s extends at %5.2fs  (reach %.1f)"
+				print("   %-7s peak at %5.2fs  (reach %.1f)"
 					% [STRIKERS[bone_name], peak.x * STEP, peak.y])
+		print("   %s" % "-".repeat(52))
+		for bone_name: String in STRIKERS:
+			var values: PackedFloat32Array = reach[bone_name]
+			var best := 0
+			for i in values.size():
+				if values[i] > values[best]:
+					best = i
+			var rest: float = values[0]
+			var heights: PackedFloat32Array = lift[bone_name]
+			var highest := 0
+			for i in heights.size():
+				if heights[i] > heights[highest]:
+					highest = i
+			print("   %-7s furthest at %5.2fs (%+.1f)    highest at %5.2fs (%+.1f)"
+				% [STRIKERS[bone_name], best * STEP, values[best] - rest,
+					highest * STEP, heights[highest] - heights[0]])
 	quit()
 
 
