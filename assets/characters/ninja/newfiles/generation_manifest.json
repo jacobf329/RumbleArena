@@ -1,0 +1,214 @@
+{
+  "provider": "Meshy",
+  "motion_model": "prime",
+  "budget": 300,
+  "task_reported_total": 278,
+  "account_initial_balance": 2005,
+  "account_final_balance": 1447,
+  "unreconciled_balance_difference": 280,
+  "assets": [
+    {
+      "type": "ninja_reference",
+      "id": "01a0778b-c215-74ca-ba90-e9bd4f46f955",
+      "credits": 9
+    },
+    {
+      "type": "ninja_model",
+      "id": "01a0778d-f2e6-77ed-9ac0-ce56d408f8ae",
+      "credits": 30
+    },
+    {
+      "type": "tails_reference",
+      "id": "01a0778d-f46f-72b2-b13c-8c1249db0d1f",
+      "credits": 9
+    },
+    {
+      "type": "tails_model",
+      "id": "01a0778f-b158-71b1-bdff-49251955fc7c",
+      "credits": 30
+    },
+    {
+      "type": "rig",
+      "id": "01a077bf-518a-74a2-a628-2303022066b3",
+      "credits": 5
+    }
+  ],
+  "animations": [
+    {
+      "name": "backflip",
+      "prompt": "An agile martial artist starts upright in a balanced fighting guard, bends both knees, jumps vertically, tucks into one complete backward somersault in the air, opens the legs, lands firmly on both feet with bent knees, and returns to the same fighting guard. Full body, one standing backflip, no extra steps.",
+      "motion_task_id": "01a0778b-3aa8-7129-b3ef-2c8e7de2ee62",
+      "animation_task_id": "01a077c0-3997-71a5-ba94-c44015a76bbd",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3.5
+    },
+    {
+      "name": "front_flip",
+      "prompt": "An agile martial artist starts in fighting guard, bends the knees, jumps upward and slightly forward, tucks into one complete forward flip in the air, extends the legs, lands on both feet with knees bent, then returns to fighting guard. One aerial front flip, no hand contact with the ground.",
+      "motion_task_id": "01a0778c-ece6-7495-b041-2373428b53ba",
+      "animation_task_id": "01a077c0-3d94-7648-913c-fade1dcb8100",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3.5
+    },
+    {
+      "name": "jump",
+      "prompt": "An athletic ninja in fighting guard bends the knees, jumps straight upward without rotating, lifts both feet clear of the floor, then lands on both feet with soft bent knees and returns to the starting guard. One normal vertical jump, full body, no walking.",
+      "motion_task_id": "01a0778c-f2dc-7647-9c9f-431862edfe17",
+      "animation_task_id": "01a077c0-41a3-7139-a15d-cb8d39b4942b",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2.5
+    },
+    {
+      "name": "crouch",
+      "prompt": "From an upright martial arts guard, a ninja smoothly lowers into a deep balanced crouch, keeps both feet planted, holds the low crouch briefly with hands ready in front, then rises to the same standing guard. Controlled full body motion, no steps.",
+      "motion_task_id": "01a0778c-f8cd-7351-be60-4728532463a3",
+      "animation_task_id": "01a077c0-454b-76f9-a198-edd1be1e5c80",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3
+    },
+    {
+      "name": "pickup",
+      "prompt": "A ninja in standing guard looks at a small object on the ground in front of the right foot, squats and bends forward, reaches the right hand to the ground, closes the hand to grasp the object, then stands upright holding it near the waist. Left hand balances. One deliberate pickup.",
+      "motion_task_id": "01a0778c-fe77-714f-b8e0-1d5a82862a61",
+      "animation_task_id": "01a077c0-48d0-7532-b398-20935634d948",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3
+    },
+    {
+      "name": "throw",
+      "prompt": "A martial artist stands with left foot forward holding a small object in the right hand, draws the right arm back, rotates the torso and throws the object forward overhand, follows through across the body, then returns to fighting guard. One forceful throw, planted stance, clear release gesture.",
+      "motion_task_id": "01a0778d-049c-7384-9a0d-5ee067602f1d",
+      "animation_task_id": "01a077c0-4c58-747a-bdd1-6c41b22a117e",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2.5
+    },
+    {
+      "name": "punch_jab",
+      "prompt": "A ninja in left foot forward boxing guard executes one fast straight left jab toward an opponent at chest height, rotates the left shoulder, keeps the right hand protecting the face, immediately retracts the left fist and returns to the identical guard. Feet planted, full body, clean single strike.",
+      "motion_task_id": "01a0778d-0a69-7642-abea-9cd3b57ccabd",
+      "animation_task_id": "01a077c0-501b-76d8-acac-8c65eca1c20f",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2
+    },
+    {
+      "name": "punch_cross",
+      "prompt": "A ninja in left foot forward fighting guard delivers one powerful straight right cross, rotates hips and torso, pivots on the rear foot, keeps the left fist guarding the face, retracts the right fist and returns to the original guard. Full body, one punch, no locomotion.",
+      "motion_task_id": "01a0778d-10ec-7501-b7a0-042146ed47dc",
+      "animation_task_id": "01a077c0-53c8-7611-b022-b43c7712ff96",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2
+    },
+    {
+      "name": "kick_front",
+      "prompt": "From fighting guard, an agile martial artist raises the right knee, snaps the right foot straight forward into a chest height front kick, retracts the knee, plants the foot and returns to the same guard. Balance on left foot, hands guarding face, one clean kick.",
+      "motion_task_id": "01a0778d-153e-72a8-8ccd-0e3f089f6f79",
+      "animation_task_id": "01a077c0-578e-7235-8ce4-b48d6bf569a6",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2.5
+    },
+    {
+      "name": "kick_side",
+      "prompt": "From fighting guard, a martial artist chambers the right knee across the body, turns the hips and extends the right heel horizontally into a strong waist height side kick, retracts the leg and returns to the same stance. Left leg supports, hands guard, one side kick.",
+      "motion_task_id": "01a0778d-1abe-776c-9cb8-443d55a83536",
+      "animation_task_id": "01a077c0-5b00-71f1-ba5c-74509a1942bc",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2.5
+    },
+    {
+      "name": "somersault_forward",
+      "prompt": "A ninja starts standing, crouches, places both hands on the floor, tucks the chin and rolls forward over the shoulders in one smooth ground somersault, brings both feet underneath and rises into fighting guard. A ground forward roll, not an aerial flip.",
+      "motion_task_id": "01a0778d-22af-7740-85e9-d95b9b748598",
+      "animation_task_id": "01a077c0-5e7e-75e8-b3cb-835546e7a9e8",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3.5
+    },
+    {
+      "name": "somersault_backward",
+      "prompt": "A ninja crouches from standing, sits backward and tucks into one backward ground somersault, rolls across the rounded back and shoulders, uses both palms beside the head to push safely through, brings feet underneath and rises into fighting guard. One backward floor roll.",
+      "motion_task_id": "01a0778d-2893-73e3-8b98-27e2aa5ba9f2",
+      "animation_task_id": "01a077c0-625c-73b6-8a02-0db61d86ef2f",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3.5
+    },
+    {
+      "name": "roundhouse",
+      "prompt": "From left foot forward fighting guard, an agile ninja pivots on the left support foot, chambers the right knee, rotates hips and swings the right shin in a horizontal arc for one head height roundhouse kick, retracts the leg and returns to guard. Arms counterbalance, full body.",
+      "motion_task_id": "01a0778d-2f19-757c-b5c9-fa37b99e0348",
+      "animation_task_id": "01a077c0-6640-700c-a791-c13142405ddf",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 2.5
+    },
+    {
+      "name": "crane_kick",
+      "prompt": "A martial artist balances in crane stance on the left leg with right knee lifted and both arms raised outward, springs upward from the left foot, snaps the left leg forward in a jumping front kick while airborne, lands in balance and returns to fighting guard. One dramatic crane kick.",
+      "motion_task_id": "01a0778d-34cf-7095-8db8-ff1117f721f8",
+      "animation_task_id": "01a077c0-6974-71a5-a24d-b54f187a85cb",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3.5
+    },
+    {
+      "name": "ninja_run",
+      "prompt": "A seamless full body ninja running cycle in place. Athletic forward lean, quick alternating leg strides, feet lift and push off naturally, bent arms held low and slightly behind with restrained counter swing, head steady looking forward. Constant pace, no start or stop, no turns, no net forward travel.",
+      "motion_task_id": "01a0778d-3a5b-779b-803d-e3edfbeac37e",
+      "animation_task_id": "01a077c0-6d37-7600-97aa-de02d83d21ea",
+      "motion_status": "SUCCEEDED",
+      "animation_status": "SUCCEEDED",
+      "motion_credits": 10,
+      "application_credits": 3,
+      "duration_seconds": 3
+    }
+  ],
+  "validation": {
+    "godot_version": "4.7.2",
+    "imported_custom_clips": 15,
+    "all_textures": "2048x2048",
+    "visual_samples": "All 15 clips sampled; flips and crane kick additionally sampled at 7 times",
+    "limits": [
+      "no finger articulation",
+      "shader headband wind, not physical cloth",
+      "gameplay events and root motion integration required"
+    ]
+  }
+}
