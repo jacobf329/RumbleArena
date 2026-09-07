@@ -847,6 +847,41 @@ catches genuinely unimported art as repaired it. It now creates a real .png,
 checks the guard says stale, removes it, and checks the guard says current
 again.
 
+## The same failure, a third time, by a new route
+
+Installing on a second machine meant running `--cold` for the first time since
+the armoured pack landed, and a fresh download did not boot. Same symptom as
+before -- no global class cache, so every `class_name` unresolved, autoloads
+dead, arena rendering perfectly and ignoring the controller -- reached a way I
+had not considered.
+
+`const DEFAULT_VISUAL := preload("res://src/characters/visuals/ninja.tres")`. A
+preload resolves while the script is being *parsed*, and that .tres reaches a
+.glb. On a first launch, before Godot has imported anything, the parser is
+racing the importer. Lose, and FighterVisual does not compile; everything
+referencing it follows.
+
+The chain is what hid it. Preloading a .glb from a script looks obviously wrong;
+preloading a plain resource looks obviously fine, and it is the resource's own
+ExtResource that reaches the asset. It was also intermittent, which is worse
+than broken -- one cold run failed and the next succeeded, so a laptop might
+have worked and a desktop might not.
+
+Fixed by loading it on first use instead. `tools/check_preloads.py` follows
+preload chains through .tres and .res and fails the build if any of them reaches
+something Godot has to import; it runs on every test pass and costs nothing,
+because the behavioural version of the check is `--cold` and that pays a full
+reimport. Scene preloads are deliberately not followed: they have been in this
+project since the first milestone and have never failed a cold start, and a rule
+invented from theory that fires on working code is worse than no rule.
+
+Three times now, and each one wanted a different guard: `check_cold_start.sh`
+for a missing cache, `check_cache_guard.sh` for a stale one, and now
+`check_preloads.py` for a cache that never got built because a script could not
+parse. The thing they have in common is that no gameplay test can see any of
+them -- the suite's first step is an import, which repairs the exact condition
+each failure needs.
+
 ## Working practices
 
 - **Headless validation every commit.** `./run_tests.sh` imports the project

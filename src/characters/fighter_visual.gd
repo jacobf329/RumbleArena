@@ -16,7 +16,25 @@ extends Node3D
 ## Worn by anything that does not name a character: the arena's placeholder
 ## fighter, a decoy whose owner has been freed, a preview before its first
 ## set_character. Keeping a default here means no consumer has to handle null.
-const DEFAULT_VISUAL := preload("res://src/characters/visuals/ninja.tres")
+##
+## Loaded on first use rather than preloaded, and that is not a style choice.
+## A preload resolves while the script is being parsed, and this one reaches a
+## .tres that reaches a .glb -- so on a first launch, before Godot has imported
+## anything, the parser races the importer for it. Lose that race and the script
+## fails to compile, its class_name never reaches the global cache, and every
+## script referencing FighterVisual goes down with it: autoloads included, so the
+## arena renders and nothing responds to the controller. That is the exact
+## failure that shipped twice, reached by a third route.
+## tools/check_preloads.py exists to stop it being reached by a fourth.
+const DEFAULT_VISUAL_PATH := "res://src/characters/visuals/ninja.tres"
+
+static var _default_visual: CharacterVisual
+
+
+static func default_visual() -> CharacterVisual:
+	if _default_visual == null:
+		_default_visual = load(DEFAULT_VISUAL_PATH)
+	return _default_visual
 const HUE_SHADER := preload("res://assets/characters/ninja/ninja_hue.gdshader")
 const GHOST_SHADER := preload("res://assets/characters/ninja/ninja_ghost.gdshader")
 
@@ -40,7 +58,8 @@ const WALK_SPEED := 4.2
 ## than no decoy at all.
 @export var ghost: bool = false
 
-var visual: CharacterVisual = DEFAULT_VISUAL
+## Null until _ready or set_visual resolves it to the default.
+var visual: CharacterVisual
 
 var _model: Node3D
 var _player: AnimationPlayer
@@ -54,13 +73,15 @@ var _locked := false
 
 
 func _ready() -> void:
+	if visual == null:
+		visual = default_visual()
 	_build_model()
 
 
 ## Wears a different body. A no-op when it is already wearing that one, so this
 ## is safe to call from set_character on every respawn.
 func set_visual(next: CharacterVisual) -> void:
-	var chosen := next if next != null else DEFAULT_VISUAL
+	var chosen := next if next != null else default_visual()
 	if chosen == visual and _model != null:
 		return
 	visual = chosen

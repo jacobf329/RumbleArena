@@ -1020,7 +1020,7 @@ func _test_animation_data_is_sane() -> void:
 	for index in CharacterRoster.size():
 		var definition := CharacterRoster.at(index)
 		var visual: CharacterVisual = definition.visual \
-			if definition.visual != null else FighterVisual.DEFAULT_VISUAL
+			if definition.visual != null else FighterVisual.default_visual()
 		var library := visual.animations
 		var move_set: MoveSet = definition.move_set \
 			if definition.move_set != null else Fighter.DEFAULT_MOVE_SET

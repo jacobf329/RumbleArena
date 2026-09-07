@@ -96,13 +96,19 @@ story fight is a second kind of match.
 
 1. **Download the project:**
    [RumbleArena.zip](https://github.com/jacobf329/RumbleArena/archive/refs/heads/claude/godot-ninja-game-96kjrj.zip)
+   — about 60 MB, most of it the two character models and their 2K textures.
 2. **Right-click the .zip → Extract All.** Windows blocks scripts inside a zip
    until it is extracted, so this step is not optional.
 3. **Double-click `Setup.bat`** in the extracted folder.
 
-Setup finds Godot, offers to download it if you do not have it, prepares the
-game's assets, and puts a RumbleArena shortcut on your Desktop. After that you
-launch from the Desktop icon.
+Setup finds Godot, offers to download it if you do not have it (another ~60 MB
+from the official releases page — nothing is installed and nothing else on the
+PC is touched), prepares the game's assets, and puts a RumbleArena shortcut on
+your Desktop. After that you launch from the Desktop icon.
+
+Installing on a second machine is the same three steps; nothing has to be
+uninstalled anywhere and the two copies do not know about each other. Story
+progress is saved per machine, so a new install starts at chapter one.
 
 The asset step takes a minute or two and happens whenever the game files have
 changed. **Do not skip it by launching Godot by hand** — without an up-to-date

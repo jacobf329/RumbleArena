@@ -28,6 +28,16 @@ if grep -qE "SCRIPT ERROR|Parse Error|Failed loading resource" <<<"$import_outpu
 	exit 1
 fi
 
+# A script that preloads its way to an imported asset cannot be parsed until
+# that asset is imported, which on a first launch is a race it can lose. Static,
+# so it costs nothing and runs on every pass -- the behavioural version of this
+# check is --cold, which is opt-in because it pays a full reimport.
+echo
+echo "==> Checking preload chains"
+if ! python3 "$PROJECT/tools/check_preloads.py" "$PROJECT"; then
+	exit 1
+fi
+
 # The launchers refuse to start a game whose class cache does not match the
 # scripts on disk. That guard is invisible to every suite below -- the import
 # pass above makes the cache current before anything could notice otherwise --
