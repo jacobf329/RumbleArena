@@ -111,7 +111,9 @@ uninstalled anywhere and the two copies do not know about each other. Story
 progress is saved per machine, so a new install starts at chapter one.
 
 The asset step takes a minute or two and happens whenever the game files have
-changed. **Do not skip it by launching Godot by hand** — without an up-to-date
+changed. It runs up to three passes and checks after each one: a single pass can
+stop with work still outstanding on a slower disk, and the result of *that* is a
+game that renders and ignores the controller. **Do not skip it by launching Godot by hand** — without an up-to-date
 class cache every `class_name` type is unresolved: the autoloads fail to compile
 and nothing responds to input, while the arena still renders perfectly. Both
 launchers check for this and rebuild automatically.

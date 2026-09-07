@@ -882,6 +882,80 @@ parse. The thing they have in common is that no gameplay test can see any of
 them -- the suite's first step is an import, which repairs the exact condition
 each failure needs.
 
+## The launcher guard nobody had ever run
+
+The laptop install failed with the familiar wall of unresolved `class_name`
+errors, and chasing it turned up something worse than the failure itself: the
+Windows launcher path had no test at all.
+
+`tools/cache_is_current.sh` and `tools/preflight.ps1` do the same job for the
+two platforms. The suite exercised the bash one. Windows players run the
+PowerShell one. So when the freshness half of that check got fixed -- it
+measured art against `global_script_class_cache.cfg`, which Godot only rewrites
+when the class list changes -- the fix went into bash and the PowerShell twin
+kept the bug for a whole release. Two implementations of one rule, one of them
+tested.
+
+Three defects came out of finally running it:
+
+- **The batch guards failed open.** `if not errorlevel 2 goto :ready` reads exit
+  code 1 as permission to launch, and PowerShell reports its own unhandled
+  errors as 1. So any error inside the guard -- not a stale cache, just a
+  hiccup in the guard itself -- started the game in exactly the state the guard
+  exists to refuse. Now only a clean 0 counts as ready, in `Play
+  RumbleArena.bat`, `Setup.bat` and `Diagnose.bat` alike.
+- **The freshness reference**, as above, now the newer of the class cache and
+  `uid_cache.bin`.
+- **A trap I walked into while fixing it.** Adding an `-Explain` switch, I put a
+  `Write-Output` inside the check to name the missing classes. A PowerShell
+  function returns everything written to the output stream, so the function
+  started returning `@("some text", $false)` -- and a non-empty array is truthy.
+  Asking why the cache was stale turned a stale cache into a ready one. The
+  fail-open shape, arrived at from the inside, in the file whose entire purpose
+  is to not do that. Reasons are collected now and printed by the caller once
+  the verdict is decided.
+
+`tools/check_preflight.sh` drives the real script through seven cases and runs
+in `./run_tests.sh`. It skips loudly where PowerShell is absent, because a
+skipped check is not a passing one. Two of the cases exist because a weaker
+version of each passed against the bug: "art newer than the cache is stale"
+holds true whether or not the freshness reference is right, so there is a
+separate case for art that landed *before* the last import and must read as
+ready; and there is a case asserting that asking for an explanation does not
+change the answer.
+
+`Diagnose.bat` now reports *which* classes the cache is missing rather than only
+that it is stale. Three occurrences in, "the cache is stale" has never once been
+enough to work from, and the missing names point straight at the script that
+failed to compile.
+
+## One import pass was never enough
+
+Underneath the launcher bugs was the thing actually breaking the laptop: a
+single `--headless --editor --quit` is not reliably enough to prepare this
+project any more.
+
+Godot quits after one main-loop iteration. With 24 MB of models and three 2K
+texture sets to bring in, it can stop with work still outstanding, and a script
+that could not compile because its asset was not ready yet never reaches the
+class cache. The result is the familiar one -- every `class_name` unresolved,
+autoloads dead, arena rendering perfectly and ignoring the controller.
+
+It showed up here as `check_cold_start.sh` failing once in a run and passing the
+next four times. That is the tell: on this machine it is a rare flake, and on a
+slower laptop with a cold disk cache it is not rare at all. Treating it as a
+flake would have been treating the user's broken install as bad luck.
+
+Every path that prepares assets now **verifies and repeats** rather than running
+once and hoping: `Setup.bat`, `Play RumbleArena.bat`, `play.sh` and
+`check_cold_start.sh` all import, ask the guard whether the cache is actually
+usable, and go round again up to three times before giving up with a message.
+
+`check_cold_start.sh` also stopped asking the wrong question. It tested that
+`global_script_class_cache.cfg` *existed*, which a half-finished import produces
+perfectly well. It now asks `cache_is_current.sh`, which is the same question
+the launcher asks: does the cache know every class the project declares.
+
 ## Working practices
 
 - **Headless validation every commit.** `./run_tests.sh` imports the project

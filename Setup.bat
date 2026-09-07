@@ -46,18 +46,29 @@ REM the arena still renders. "Assets already prepared" was a lie in exactly that
 REM case, and it is the reason a correctly-installed game looked dead.
 if not exist "%~dp0tools\preflight.ps1" goto :prepare
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
-if not errorlevel 2 goto :imported
+REM Only a clean 0 counts as prepared; see the note in Play RumbleArena.bat.
+if errorlevel 1 goto :prepare
+goto :imported
 
 :prepare
 echo   [2/3] Preparing assets. This takes a minute or two, and only
 echo         happens when the game files have changed.
+REM Repeated until the cache is actually usable rather than run once and hoped
+REM over. Godot quits after a single main-loop iteration, so on a slow disk or a
+REM big import it can stop with work still outstanding, leaving a class cache
+REM missing whatever had not compiled yet -- which is a game that renders and
+REM ignores the controller. An import pass that fails still exits 0 and still
+REM leaves a .godot behind, so "we ran it" is never evidence that it worked.
+set /a ATTEMPT=0
+:prepare_attempt
+set /a ATTEMPT+=1
+if !ATTEMPT! gtr 1 echo         Still preparing (pass !ATTEMPT!)...
 "!GODOT_EXE!" --headless --path "%~dp0." --editor --quit > "%~dp0setup_log.txt" 2>&1
-
-REM An import pass that fails still exits 0 and still leaves a .godot folder
-REM behind, so "we ran it" is not evidence that it worked.
 if not exist "%~dp0tools\preflight.ps1" goto :prepared
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
-if errorlevel 2 goto :notprepared
+if not errorlevel 1 goto :prepared
+if !ATTEMPT! lss 3 goto :prepare_attempt
+goto :notprepared
 
 :prepared
 echo         Done.

@@ -72,25 +72,32 @@ cache_ready() {
 	fi
 }
 
+# Repeated until the cache is actually usable, not run once and hoped over.
+# Godot quits after a single main-loop iteration, so on a slow disk or a big
+# import it can stop with work still outstanding, leaving a class cache missing
+# whatever had not compiled yet. An import pass that fails still exits 0 and
+# still leaves a .godot behind, so "we ran it" is not evidence that it worked.
 if ! cache_ready; then
 	echo
 	echo "  Preparing assets. This takes a minute or two, and only happens"
 	echo "  when the game files have changed."
-	"$GODOT_BIN" --headless --path "$PWD" --editor --quit > setup_log.txt 2>&1
-	if cache_ready; then
-		echo "  Ready."
-	else
-		# An import pass that fails still exits 0 and still leaves a .godot
-		# behind, so "we ran it" is not evidence that it worked.
-		echo
-		echo "  Preparing the assets did not work, so the game would start with"
-		echo "  nothing responding to input. Rather than launch it like that:"
-		echo
-		echo "    1. Delete the .godot folder here and run ./play.sh again."
-		echo "    2. If that fails too, send me setup_log.txt from this folder."
-		echo
-		exit 1
-	fi
+	attempt=0
+	while ! cache_ready; do
+		attempt=$((attempt + 1))
+		if [ "$attempt" -gt 3 ]; then
+			echo
+			echo "  Preparing the assets did not work, so the game would start with"
+			echo "  nothing responding to input. Rather than launch it like that:"
+			echo
+			echo "    1. Delete the .godot folder here and run ./play.sh again."
+			echo "    2. If that fails too, send me setup_log.txt from this folder."
+			echo
+			exit 1
+		fi
+		[ "$attempt" -gt 1 ] && echo "  Still preparing (pass $attempt)..."
+		"$GODOT_BIN" --headless --path "$PWD" --editor --quit > setup_log.txt 2>&1
+	done
+	echo "  Ready."
 fi
 
 # One line if there is a newer version. Bounded and never fatal.

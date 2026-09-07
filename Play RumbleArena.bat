@@ -28,8 +28,13 @@ goto :preflight_done
 :preflight_quiet
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
 :preflight_done
-if not errorlevel 2 goto :ready
-goto :prepare
+REM Only a clean 0 means ready. Preflight answers 2 for a stale cache, but
+REM PowerShell answers 1 for an unhandled error of its own -- and "not
+REM errorlevel 2" read that as permission to launch, which is the one thing
+REM this check exists to refuse. A guard whose failure mode is "carry on" is
+REM not a guard.
+if errorlevel 1 goto :prepare
+goto :ready
 
 :legacy_check
 if exist "%~dp0.godot\global_script_class_cache.cfg" goto :ready
@@ -39,13 +44,23 @@ if exist "%~dp0.godot\global_script_class_cache.cfg" goto :ready
 echo   Preparing assets. This takes a minute or two, and only happens
 echo   when the game files have changed.
 echo.
+REM Repeated until the cache is actually usable rather than run once and hoped
+REM over. Godot quits after a single main-loop iteration, so on a slow disk or a
+REM big import it can stop with work still outstanding, leaving a class cache
+REM missing whatever had not compiled yet -- which is a game that renders and
+REM ignores the controller. An import pass that fails still exits 0 and still
+REM leaves a .godot behind, so "we ran it" is never evidence that it worked.
+set /a ATTEMPT=0
+:prepare_attempt
+set /a ATTEMPT+=1
+if !ATTEMPT! gtr 1 echo   Still preparing (pass !ATTEMPT!)...
 "!GODOT_EXE!" --headless --path "%~dp0." --editor --quit > "%~dp0setup_log.txt" 2>&1
-
-REM An import pass that fails still exits 0 and still leaves a .godot folder
-REM behind, so "we ran it" is not evidence that it worked. Checking is what
-REM turns a game that silently ignores the controller into a message saying why.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck
-if errorlevel 2 goto :notprepared
+if not errorlevel 1 goto :prepared
+if !ATTEMPT! lss 3 goto :prepare_attempt
+goto :notprepared
+
+:prepared
 echo   Ready.
 echo.
 

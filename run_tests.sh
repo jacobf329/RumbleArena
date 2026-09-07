@@ -38,6 +38,15 @@ if ! python3 "$PROJECT/tools/check_preloads.py" "$PROJECT"; then
 	exit 1
 fi
 
+# The Windows launcher's guard is the one players actually run, and it had never
+# been executed by anything but them: the suite tested only its bash twin, and
+# the two drifted. Skips loudly where there is no PowerShell.
+echo
+echo "==> Checking the Windows launcher guard"
+if ! "$PROJECT/tools/check_preflight.sh"; then
+	exit 1
+fi
+
 # The launchers refuse to start a game whose class cache does not match the
 # scripts on disk. That guard is invisible to every suite below -- the import
 # pass above makes the cache current before anything could notice otherwise --

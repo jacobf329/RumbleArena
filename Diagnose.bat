@@ -27,9 +27,14 @@ if defined GODOT_EXE (
 >> "%OUT%" echo == Asset cache ==
 if exist "%~dp0.godot\global_script_class_cache.cfg" (
 	>> "%OUT%" echo Cache file: present
+	REM Only a clean 0 is "current": PowerShell reports its own errors as 1, and
+	REM reading that as healthy is how a broken install looks fine in a report.
 	powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck >nul 2>&1
-	if errorlevel 2 (
+	if errorlevel 1 (
 		>> "%OUT%" echo Cache state: STALE - does not match the scripts on disk.
+		REM Which classes, not just that it is stale. This failure has shipped
+		REM three times and the missing names point straight at the cause.
+		powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\preflight.ps1" -ProjectDir "%~dp0." -NoUpdateCheck -Explain >> "%OUT%" 2>&1
 	) else (
 		>> "%OUT%" echo Cache state: current
 	)

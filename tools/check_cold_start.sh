@@ -18,13 +18,24 @@ GODOT="${GODOT:-godot}"
 echo "==> Cold start: removing .godot to simulate a fresh download"
 rm -rf .godot
 
+# One pass is not reliably enough. Godot quits after a single main-loop
+# iteration, and with 24 MB of models and 2K textures to bring in, an import can
+# still be outstanding when it does -- leaving a class cache that is missing
+# whatever failed to compile in the meantime. It showed up here as an
+# intermittent failure of this very check, which on a slower machine is not
+# intermittent at all. So the launchers verify and repeat, and so does this.
 echo "==> Import pass (what the launcher runs on first launch)"
-"$GODOT" --headless --path "$PROJECT" --editor --quit >/dev/null 2>&1
-
-if [ ! -f ".godot/global_script_class_cache.cfg" ]; then
-	echo "FAILED: the import pass did not produce a global class cache."
-	exit 1
-fi
+attempt=0
+until ./tools/cache_is_current.sh "$PROJECT"; do
+	attempt=$((attempt + 1))
+	if [ "$attempt" -gt 3 ]; then
+		echo "FAILED: $((attempt - 1)) import passes did not produce a usable class cache."
+		exit 1
+	fi
+	[ "$attempt" -gt 1 ] && echo "    pass $attempt (the previous one left work outstanding)"
+	"$GODOT" --headless --path "$PROJECT" --editor --quit >/dev/null 2>&1
+done
+echo "    ready after $attempt pass(es)"
 
 echo "==> Booting the game the way the launcher does"
 output="$("$GODOT" --headless --path "$PROJECT" --quit-after 200 2>&1)"
